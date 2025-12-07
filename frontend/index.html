@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Explain Option Pricing</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f9fc; }
+        h1 { color: #1f3a5f; }
+        .container {
+            max-width: 1100px;
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        label { display: block; margin-top: 12px; font-weight: bold; }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            box-sizing: border-box;
+        }
+        .row {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .col {
+            flex: 1 1 260px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 12px 18px;
+            font-size: 16px;
+            background: #1f7aec;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover { background: #155dcc; }
+        pre {
+            background: #f0f3f8;
+            padding: 16px;
+            overflow-x: auto;
+            border-radius: 4px;
+        }
+        .footer { margin-top: 20px; font-size: 12px; color: #555; }
+        #payoffCanvas {
+            width: 100%;
+            height: 280px;
+            border: 1px solid #d0d7e2;
+            border-radius: 4px;
+            background: #fafbff;
+        }
+        .slider-section {
+            margin-top: 24px;
+            padding: 16px;
+            background: #f6f8ff;
+            border-radius: 6px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .badge-up { background: #e1f7e7; color: #1e824c; }
+        .badge-down { background: #ffe5e0; color: #b33939; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>AI Explain Option Pricing</h1>
+    <p>
+        Enter option parameters and receive theoretical pricing, Greeks, and an AI-generated explanation.
+        Use the payoff chart and slider to see how the option reacts to price moves.
+    </p>
+
+    <div style="margin-bottom: 12px;">
+        <button onclick="loadDemo()">Load Demo Scenario</button>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <label>Symbol</label>
+            <input id="symbol" value="AAPL">
+
+            <label>Option Type</label>
+            <select id="optionType">
+                <option value="CALL">CALL</option>
+                <option value="PUT">PUT</option>
+            </select>
+
+            <label>Spot Price</label>
+            <input id="spotPrice" type="number" step="0.01" value="195">
+
+            <label>Strike Price</label>
+            <input id="strikePrice" type="number" step="0.01" value="200">
+
+            <label>Risk-Free Rate (decimal)</label>
+            <input id="riskFreeRate" type="number" step="0.001" value="0.045">
+
+            <label>Volatility (decimal)</label>
+            <input id="volatility" type="number" step="0.01" value="0.25">
+
+            <label>Time to Maturity (years)</label>
+            <input id="timeToMaturity" type="number" step="0.01" value="0.25">
+
+            <label>Market Price (optional)</label>
+            <input id="marketPrice" type="number" step="0.01" value="7.8">
+
+            <button onclick="explainOption()">Explain Option</button>
+        </div>
+
+        <div class="col">
+            <h3>Payoff at Expiry</h3>
+            <canvas id="payoffCanvas"></canvas>
+
+            <div class="slider-section">
+                <h4>Why did the price change?</h4>
+                <p style="margin-top: 0;">
+                    Move the underlying price and see how the theoretical option price responds.
+                </p>
+                <label>
+                    Spot Move (% of original)
+                </label>
+                <input id="spotSlider" type="range" min="50" max="150" value="100" oninput="onSpotSliderChange()">
+                <div>
+                    Current simulated spot:
+                    <span id="simSpotLabel"></span>
+                    <span id="priceChangeBadge" class="badge"></span>
+                </div>
+                <div>
+                    Original price: <span id="origPriceLabel">-</span><br>
+                    New price: <span id="newPriceLabel">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2>API Response</h2>
+    <pre id="output">Waiting for input...</pre>
+
+    <div class="footer">
+        Backend: Spring Boot | Pricing: Black–Scholes | Explanation: LLM |
+        Frontend: Vanilla HTML + JS for hackathon demos
+    </div>
+</div>
+
+<script>
+let baseSpotForSlider = null;
+let baseTheoreticalPrice = null;
+
+function loadDemo() {
+    document.getElementById("symbol").value = "AAPL";
+    document.getElementById("optionType").value = "CALL";
+    document.getElementById("spotPrice").value = "195";
+    document.getElementById("strikePrice").value = "200";
+    document.getElementById("riskFreeRate").value = "0.045";
+    document.getElementById("volatility").value = "0.25";
+    document.getElementById("timeToMaturity").value = "0.25";
+    document.getElementById("marketPrice").value = "7.8";
+    document.getElementById("spotSlider").value = 100;
+    explainOption();
+}
+
+async function explainOption() {
+    const payload = {
+        symbol: document.getElementById("symbol").value,
+        optionType: document.getElementById("optionType").value,
+        spotPrice: parseFloat(document.getElementById("spotPrice").value),
+        strikePrice: parseFloat(document.getElementById("strikePrice").value),
+        riskFreeRate: parseFloat(document.getElementById("riskFreeRate").value),
+        volatility: parseFloat(document.getElementById("volatility").value),
+        timeToMaturity: parseFloat(document.getElementById("timeToMaturity").value)
+    };
+    const marketPrice = document.getElementById("marketPrice").value;
+    if (marketPrice !== "") payload.marketPrice = parseFloat(marketPrice);
+
+    document.getElementById("output").textContent = "Calling backend...";
+
+    try {
+        const response = await fetch("http://localhost:8080/api/options/explain", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        baseSpotForSlider = payload.spotPrice;
+        baseTheoreticalPrice = data.theoreticalPrice;
+
+        document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+        document.getElementById("origPriceLabel").textContent = data.theoreticalPrice.toFixed(4);
+        document.getElementById("spotSlider").value = 100;
+        updateSliderLabels(baseSpotForSlider, baseTheoreticalPrice, baseTheoreticalPrice);
+        drawPayoffChart(payload.optionType, payload.strikePrice, payload.marketPrice || data.theoreticalPrice);
+    } catch (err) {
+        document.getElementById("output").textContent = "Error calling backend: " + err;
+    }
+}
+
+function updateSliderLabels(simSpot, origPrice, newPrice) {
+    const simSpotLabel = document.getElementById("simSpotLabel");
+    const newPriceLabel = document.getElementById("newPriceLabel");
+    const badge = document.getElementById("priceChangeBadge");
+
+    simSpotLabel.textContent = simSpot ? simSpot.toFixed(2) : "-";
+    newPriceLabel.textContent = (typeof newPrice === "number") ? newPrice.toFixed(4) : "-";
+
+    if (typeof newPrice === "number" && typeof origPrice === "number") {
+        const diff = newPrice - origPrice;
+        if (Math.abs(diff) < 1e-6) {
+            badge.textContent = "Price unchanged";
+            badge.className = "badge";
+        } else if (diff > 0) {
+            badge.textContent = "Price increased +" + diff.toFixed(4);
+            badge.className = "badge badge-up";
+        } else {
+            badge.textContent = "Price decreased " + diff.toFixed(4);
+            badge.className = "badge badge-down";
+        }
+    } else {
+        badge.textContent = "";
+        badge.className = "badge";
+    }
+}
+
+async function onSpotSliderChange() {
+    if (!baseSpotForSlider) {
+        updateSliderLabels(null, null, null);
+        return;
+    }
+    const slider = document.getElementById("spotSlider");
+    const pct = parseFloat(slider.value);
+    const newSpot = baseSpotForSlider * (pct / 100.0);
+
+    const payload = {
+        symbol: document.getElementById("symbol").value,
+        optionType: document.getElementById("optionType").value,
+        spotPrice: newSpot,
+        strikePrice: parseFloat(document.getElementById("strikePrice").value),
+        riskFreeRate: parseFloat(document.getElementById("riskFreeRate").value),
+        volatility: parseFloat(document.getElementById("volatility").value),
+        timeToMaturity: parseFloat(document.getElementById("timeToMaturity").value)
+    };
+
+    try {
+        const response = await fetch("http://localhost:8080/api/options/explain", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        updateSliderLabels(newSpot, baseTheoreticalPrice, data.theoreticalPrice);
+    } catch (err) {
+        updateSliderLabels(newSpot, baseTheoreticalPrice, null);
+    }
+}
+
+function drawPayoffChart(optionType, strike, premium) {
+    const canvas = document.getElementById("payoffCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const width = canvas.width = canvas.clientWidth;
+    const height = canvas.height = canvas.clientHeight;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const S_min = Math.max(0, strike * 0.5);
+    const S_max = strike * 1.5;
+
+    const points = [];
+    const steps = 100;
+    let minPayoff = Infinity;
+    let maxPayoff = -Infinity;
+
+    for (let i = 0; i <= steps; i++) {
+        const S = S_min + (S_max - S_min) * (i / steps);
+        let payoff;
+        if (optionType === "CALL") {
+            payoff = Math.max(S - strike, 0) - (premium || 0);
+        } else {
+            payoff = Math.max(strike - S, 0) - (premium || 0);
+        }
+        points.push({S, payoff});
+        if (payoff < minPayoff) minPayoff = payoff;
+        if (payoff > maxPayoff) maxPayoff = payoff;
+    }
+
+    if (minPayoff === maxPayoff) {
+        minPayoff -= 1;
+        maxPayoff += 1;
+    }
+
+    const padding = 40;
+
+    function xScale(S) {
+        return padding + (S - S_min) * (width - 2 * padding) / (S_max - S_min);
+    }
+    function yScale(payoff) {
+        return height - padding - (payoff - minPayoff) * (height - 2 * padding) / (maxPayoff - minPayoff);
+    }
+
+    ctx.strokeStyle = "#c0c7d6";
+    ctx.beginPath();
+    const yZero = yScale(0);
+    ctx.moveTo(padding, yZero);
+    ctx.lineTo(width - padding, yZero);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(xScale(S_min), yScale(points[0].payoff));
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(xScale(points[i].S), yScale(points[i].payoff));
+    }
+    ctx.strokeStyle = "#1f7aec";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = "#000";
+    ctx.font = "12px Arial";
+    ctx.fillText("Underlying Price at Expiry", width / 2 - 70, height - 10);
+    ctx.save();
+    ctx.translate(10, height / 2 + 30);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText("Profit / Loss", 0, 0);
+    ctx.restore();
+}
+
+window.addEventListener("load", () => {
+    drawPayoffChart("CALL", 200, 7.8);
+    updateSliderLabels(null, null, null);
+});
+</script>
+</body>
+</html>

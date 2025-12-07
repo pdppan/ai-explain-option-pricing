@@ -1,0 +1,4 @@
+symbol,optionType,spotPrice,strikePrice,riskFreeRate,volatility,timeToMaturity,marketPrice
+AAPL,CALL,195.0,200.0,0.045,0.25,0.25,7.80
+SPY,PUT,520.0,510.0,0.042,0.20,0.50,18.50
+TSLA,CALL,250.0,300.0,0.050,0.55,0.10,4.10
