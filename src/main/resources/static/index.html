@@ -81,6 +81,7 @@
         <strong>Quick Demos:</strong>
         <button onclick="loadEquityDemo()" style="margin-left:8px;">Equity Option</button>
         <button onclick="loadBondFutureDemo()" style="margin-left:6px;">Bond Futures Option</button>
+        <button onclick="loadSofrFutureDemo()" style="margin-left:6px;">SOFR Futures Option</button>
     </div>
 
     <div class="row">
@@ -89,6 +90,7 @@
             <select id="instrumentType">
                 <option value="EQUITY_OPTION">Equity Option</option>
                 <option value="BOND_FUTURE_OPTION">Bond Futures Option</option>
+                <option value="SOFR_FUTURE_OPTION">SOFR Futures Option</option>
             </select>
 
             <label>Symbol</label>
@@ -115,8 +117,8 @@
             <label>Time to Maturity (years)</label>
             <input id="timeToMaturity" type="number" step="0.01" value="0.25">
 
-            <label>Market Price (optional)</label>
-            <input id="marketPrice" type="number" step="0.01" value="7.8">
+            <label>Number of Contracts (lot)</label>
+            <input id="numberOfContracts" type="number" step="1" value="100">
 
             <button onclick="explainOption()">Explain Option</button>
         </div>
@@ -151,17 +153,18 @@
 
     <div id="summary" style="display:none;">
         <p><strong>Symbol:</strong> <span id="sym"></span></p>
+        <p><strong>Instrument:</strong> <span id="instr"></span></p>
         <p><strong>Option:</strong> <span id="otype"></span></p>
+        <p><strong>Contract Size:</strong> <span id="csz"></span></p>
         <p><strong>Theoretical Price:</strong> <span id="price"></span></p>
-        <p><strong>Market Price:</strong> <span id="mkt"></span></p>
-        <p><strong>Mispricing:</strong> <span id="mis"></span></p>
 
         <h3>Greeks</h3>
         <ul>
             <li>Delta: <span id="delta"></span></li>
             <li>Gamma: <span id="gamma"></span></li>
-            <li>Theta (per day): <span id="theta"></span></li>
-            <li>Vega (per 1% vol): <span id="vega"></span></li>
+            <li>Theta (cal day): <span id="theta"></span></li>
+            <li>Vega: <span id="vega"></span></li>
+            <li>Rho: <span id="rho"></span></li>
         </ul>
     </div>
 
@@ -176,293 +179,309 @@
         <pre id="output"></pre>
     </details>
 
-
     <div class="footer">
-        Backend: Spring Boot | Pricing: Black–Scholes | Explanation: LLM |
+        Backend: Spring Boot | Pricing: Black–Scholes & Black–76 | Explanation: LLM |
         Frontend: Vanilla HTML + JS for demos
     </div>
 </div>
 
 <script>
-let baseSpotForSlider = null;
-let baseTheoreticalPrice = null;
-
-function loadEquityDemo() {
-    document.getElementById("instrumentType").value = "EQUITY_OPTION";
-    document.getElementById("symbol").value = "AAPL";
-    document.getElementById("optionType").value = "CALL";
-    document.getElementById("spotPrice").value = "195";
-    document.getElementById("strikePrice").value = "200";
-    document.getElementById("riskFreeRate").value = "0.045";
-    document.getElementById("volatility").value = "0.25";
-    document.getElementById("timeToMaturity").value = "0.25";
-    document.getElementById("marketPrice").value = "7.8";
-    document.getElementById("spotSlider").value = 100;
-
-    //explainOption();
-}
-
-function loadBondFutureDemo() {
-    document.getElementById("instrumentType").value = "BOND_FUTURE_OPTION";
-    document.getElementById("symbol").value = "TYH5";
-    document.getElementById("optionType").value = "CALL";
-    document.getElementById("spotPrice").value = "118.25";   // futures price
-    document.getElementById("strikePrice").value = "118.00";
-    document.getElementById("riskFreeRate").value = "0.04";
-    document.getElementById("volatility").value = "0.18";
-    document.getElementById("timeToMaturity").value = "0.5";
-    document.getElementById("marketPrice").value = "1.45";
-    document.getElementById("spotSlider").value = 100;
-
-    //explainOption();
-}
-
-
-async function explainOption() {
-  const payload = {
-    symbol: document.getElementById("symbol").value,
-    instrumentType: document.getElementById("instrumentType").value,
-    optionType: document.getElementById("optionType").value,
-    spotPrice: parseFloat(document.getElementById("spotPrice").value),
-    strikePrice: parseFloat(document.getElementById("strikePrice").value),
-    riskFreeRate: parseFloat(document.getElementById("riskFreeRate").value),
-    volatility: parseFloat(document.getElementById("volatility").value),
-    timeToMaturity: parseFloat(document.getElementById("timeToMaturity").value)
-    };
-
-    const marketPrice = document.getElementById("marketPrice").value;
-    if (marketPrice !== "") payload.marketPrice = parseFloat(marketPrice);
-
-    document.getElementById("output").textContent = "Calling backend...";
-
-    try {
-        const response = await fetch("http://localhost:8080/api/options/explain", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-        const data = await response.json();
-        baseSpotForSlider = payload.spotPrice;
-        baseTheoreticalPrice = data.theoreticalPrice;
-
-        // Show summary section
-    document.getElementById("summary").style.display = "block";
-
-    // Populate summary
-    document.getElementById("sym").textContent = data.symbol;
-    document.getElementById("otype").textContent = data.optionType;
-    document.getElementById("price").textContent = data.theoreticalPrice.toFixed(4);
-    document.getElementById("mkt").textContent =
-        data.marketPrice !== null ? data.marketPrice.toFixed(4) : "N/A";
-
-    if (data.mispricing !== null) {
-        const mp = data.mispricing;
-        const misEl = document.getElementById("mis");
-        misEl.textContent = mp.toFixed(4) + (mp > 0 ? " (Rich)" : " (Cheap)");
-        misEl.style.color = mp > 0 ? "#b33939" : "#1e824c";
-    } else {
-        document.getElementById("mis").textContent = "N/A";
-    }
-
-    // Greeks
-    document.getElementById("delta").textContent = data.delta.toFixed(4);
-    document.getElementById("gamma").textContent = data.gamma.toFixed(6);
-    document.getElementById("theta").textContent = data.theta.toFixed(6);
-    document.getElementById("vega").textContent = data.vega.toFixed(6);
-
-    // AI explanation
-    renderExplanation(data.llmExplanation);
-
-    // Raw JSON (collapsed)
-    document.getElementById("output").textContent =
-    JSON.stringify(data, null, 2);
-
-
-
-        document.getElementById("origPriceLabel").textContent = data.theoreticalPrice.toFixed(4);
-        document.getElementById("spotSlider").value = 100;
-        updateSliderLabels(baseSpotForSlider, baseTheoreticalPrice, baseTheoreticalPrice);
-        drawPayoffChart(payload.optionType, payload.strikePrice, payload.marketPrice || data.theoreticalPrice);
-    } catch (err) {
-        document.getElementById("output").textContent = "Error calling backend: " + err;
-    }
-}
-
-function updateSliderLabels(simSpot, origPrice, newPrice) {
-    const simSpotLabel = document.getElementById("simSpotLabel");
-    const newPriceLabel = document.getElementById("newPriceLabel");
-    const badge = document.getElementById("priceChangeBadge");
-
-    simSpotLabel.textContent = simSpot ? simSpot.toFixed(2) : "-";
-    newPriceLabel.textContent = (typeof newPrice === "number") ? newPrice.toFixed(4) : "-";
-
-    if (typeof newPrice === "number" && typeof origPrice === "number") {
-        const diff = newPrice - origPrice;
-        if (Math.abs(diff) < 1e-6) {
-            badge.textContent = "Price unchanged";
-            badge.className = "badge";
-        } else if (diff > 0) {
-            badge.textContent = "Price increased +" + diff.toFixed(4);
-            badge.className = "badge badge-up";
-        } else {
-            badge.textContent = "Price decreased " + diff.toFixed(4);
-            badge.className = "badge badge-down";
-        }
-    } else {
-        badge.textContent = "";
-        badge.className = "badge";
-    }
-}
-
-let sliderCallTimeout = null;
-
-function onSpotSliderChange() {
-    if (!baseSpotForSlider) {
-        // No baseline yet – nothing to simulate
-        updateSliderLabels(null, null, null);
-        return;
-    }
-
-    const slider = document.getElementById("spotSlider");
-    const pct = parseFloat(slider.value); // 50–150
-    const newSpot = baseSpotForSlider * (pct / 100.0);
-
-    // Update spot label immediately, but don't hit backend yet
-    updateSliderLabels(newSpot, baseTheoreticalPrice, null);
-
-    // Debounce: wait a short time after user stops moving the slider
-    if (sliderCallTimeout) {
-        clearTimeout(sliderCallTimeout);
-    }
-
-    sliderCallTimeout = setTimeout(() => {
-        callSliderPricing(newSpot);
-    }, 300); // 300–400 ms works well
-}
-
-async function callSliderPricing(newSpot) {
-    const payload = {
-        symbol: document.getElementById("symbol").value,
-        instrumentType: document.getElementById("instrumentType").value,
-        optionType: document.getElementById("optionType").value,
-        spotPrice: newSpot,
-        strikePrice: parseFloat(document.getElementById("strikePrice").value),
-        riskFreeRate: parseFloat(document.getElementById("riskFreeRate").value),
-        volatility: parseFloat(document.getElementById("volatility").value),
-        timeToMaturity: parseFloat(document.getElementById("timeToMaturity").value)
-    };
-
-    try {
-        const response = await fetch("/api/options/explain", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-        const data = await response.json();
-        // Now we have the new theoretical price for this simulated spot
-        updateSliderLabels(newSpot, baseTheoreticalPrice, data.theoreticalPrice);
-    } catch (err) {
-        // Backend failed – keep labels but note we don't have a new price
-        updateSliderLabels(newSpot, baseTheoreticalPrice, null);
-    }
-}
-
-function renderExplanation(text) {
-    const container = document.getElementById("explanation");
-    container.innerHTML = "";
-
-    if (!text) {
-        container.textContent = "No explanation returned.";
-        return;
-    }
-
-    // Split on blank lines into paragraphs
-    const parts = text.split(/\n{2,}/);
-
-    parts.forEach(part => {
-        const trimmed = part.trim();
-        if (!trimmed) return;
-
-        const p = document.createElement("p");
-        p.textContent = trimmed;
-        container.appendChild(p);
+    const currencyFmt = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 2
     });
-}
 
-function drawPayoffChart(optionType, strike, premium) {
-    const canvas = document.getElementById("payoffCanvas");
-    const ctx = canvas.getContext("2d");
-
-    const width = canvas.width = canvas.clientWidth;
-    const height = canvas.height = canvas.clientHeight;
-
-    ctx.clearRect(0, 0, width, height);
-
-    const S_min = Math.max(0, strike * 0.5);
-    const S_max = strike * 1.5;
-
-    const points = [];
-    const steps = 100;
-    let minPayoff = Infinity;
-    let maxPayoff = -Infinity;
-
-    for (let i = 0; i <= steps; i++) {
-        const S = S_min + (S_max - S_min) * (i / steps);
-        let payoff;
-        if (optionType === "CALL") {
-            payoff = Math.max(S - strike, 0) - (premium || 0);
-        } else {
-            payoff = Math.max(strike - S, 0) - (premium || 0);
+    function fmtCurrency(value) {
+        if (value === null || value === undefined || isNaN(value)) {
+            return "-";
         }
-        points.push({S, payoff});
-        if (payoff < minPayoff) minPayoff = payoff;
-        if (payoff > maxPayoff) maxPayoff = payoff;
+        return currencyFmt.format(value);
     }
 
-    if (minPayoff === maxPayoff) {
-        minPayoff -= 1;
-        maxPayoff += 1;
+    let baseSpotForSlider = null;
+    let baseTheoreticalPrice = null;
+
+    function loadEquityDemo() {
+        document.getElementById("instrumentType").value = "EQUITY_OPTION";
+        document.getElementById("symbol").value = "AAPL";
+        document.getElementById("optionType").value = "CALL";
+        document.getElementById("spotPrice").value = "195";
+        document.getElementById("strikePrice").value = "200";
+        document.getElementById("riskFreeRate").value = "0.045";
+        document.getElementById("volatility").value = "0.25";
+        document.getElementById("timeToMaturity").value = "0.25";
+        document.getElementById("numberOfContracts").value = "100";
+        document.getElementById("spotSlider").value = 100;
     }
 
-    const padding = 40;
-
-    function xScale(S) {
-        return padding + (S - S_min) * (width - 2 * padding) / (S_max - S_min);
+    function loadBondFutureDemo() {
+        document.getElementById("instrumentType").value = "BOND_FUTURE_OPTION";
+        document.getElementById("symbol").value = "TYH5";
+        document.getElementById("optionType").value = "CALL";
+        document.getElementById("spotPrice").value = "118.25";   // bond futures price
+        document.getElementById("strikePrice").value = "118.00";
+        document.getElementById("riskFreeRate").value = "0.04";
+        document.getElementById("volatility").value = "0.18";
+        document.getElementById("timeToMaturity").value = "0.5";
+        document.getElementById("numberOfContracts").value = "100"; // example contract size
+        document.getElementById("spotSlider").value = 100;
     }
-    function yScale(payoff) {
-        return height - padding - (payoff - minPayoff) * (height - 2 * padding) / (maxPayoff - minPayoff);
+
+    function loadSofrFutureDemo() {
+        document.getElementById("instrumentType").value = "SOFR_FUTURE_OPTION";
+        document.getElementById("symbol").value = "SOFR Mar-26";
+        document.getElementById("optionType").value = "CALL";
+        document.getElementById("spotPrice").value = "95.50";     // SOFR futures price
+        document.getElementById("strikePrice").value = "95.25";
+        document.getElementById("riskFreeRate").value = "0.045";
+        document.getElementById("volatility").value = "0.60";
+        document.getElementById("timeToMaturity").value = "0.25"; // 3 months
+        document.getElementById("numberOfContracts").value = "100"; // not notional
+        document.getElementById("spotSlider").value = 100;
     }
 
-    ctx.strokeStyle = "#c0c7d6";
-    ctx.beginPath();
-    const yZero = yScale(0);
-    ctx.moveTo(padding, yZero);
-    ctx.lineTo(width - padding, yZero);
-    ctx.stroke();
+    async function explainOption() {
+        const payload = {
+            symbol: document.getElementById("symbol").value,
+            instrumentType: document.getElementById("instrumentType").value,
+            optionType: document.getElementById("optionType").value,
+            spotPrice: parseFloat(document.getElementById("spotPrice").value),
+            strikePrice: parseFloat(document.getElementById("strikePrice").value),
+            riskFreeRate: parseFloat(document.getElementById("riskFreeRate").value),
+            volatility: parseFloat(document.getElementById("volatility").value),
+            timeToMaturityYears: parseFloat(document.getElementById("timeToMaturity").value),
+            numberOfContracts: parseFloat(document.getElementById("numberOfContracts").value || "0")
+        };
 
-    ctx.beginPath();
-    ctx.moveTo(xScale(S_min), yScale(points[0].payoff));
-    for (let i = 1; i < points.length; i++) {
-        ctx.lineTo(xScale(points[i].S), yScale(points[i].payoff));
+        document.getElementById("output").textContent = "Calling backend...";
+
+        try {
+            const response = await fetch("/api/options/explain", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            // Baseline for slider
+            baseSpotForSlider = payload.spotPrice;
+            baseTheoreticalPrice = data.price;
+
+            // Show summary section
+            document.getElementById("summary").style.display = "block";
+
+            // Populate summary
+            document.getElementById("sym").textContent = data.symbol;
+            document.getElementById("instr").textContent = data.instrumentType;
+            document.getElementById("otype").textContent = data.optionType;
+            document.getElementById("csz").textContent = payload.numberOfContracts.toFixed(0);
+            document.getElementById("price").textContent = fmtCurrency(data.price);
+
+            // Greeks
+            document.getElementById("delta").textContent = fmtCurrency(data.delta) + " per $1 move";
+            document.getElementById("gamma").textContent = data.gamma.toFixed(6) + " per $²"; // unitless-ish
+            document.getElementById("theta").textContent = fmtCurrency(data.theta/365) + " per day";
+            document.getElementById("vega").textContent = fmtCurrency(data.vega) + " per 1% im vol";
+            document.getElementById("rho").textContent   = fmtCurrency(data.rho) + " per 1% rate";
+
+            // AI explanation
+            renderExplanation(data.explanation);
+
+            // Raw JSON (collapsed)
+            document.getElementById("output").textContent =
+                JSON.stringify(data, null, 2);
+
+            // Slider + payoff
+            document.getElementById("origPriceLabel").textContent = data.price.toFixed(4);
+            document.getElementById("spotSlider").value = 100;
+            updateSliderLabels(baseSpotForSlider, baseTheoreticalPrice, baseTheoreticalPrice);
+            drawPayoffChart(payload.optionType, payload.strikePrice, data.price);
+        } catch (err) {
+            document.getElementById("output").textContent = "Error calling backend: " + err;
+        }
     }
-    ctx.strokeStyle = "#1f7aec";
-    ctx.lineWidth = 2;
-    ctx.stroke();
 
-    ctx.fillStyle = "#000";
-    ctx.font = "12px Arial";
-    ctx.fillText("Underlying Price at Expiry", width / 2 - 70, height - 10);
-    ctx.save();
-    ctx.translate(10, height / 2 + 30);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText("Profit / Loss", 0, 0);
-    ctx.restore();
-}
+    function updateSliderLabels(simSpot, origPrice, newPrice) {
+        const simSpotLabel = document.getElementById("simSpotLabel");
+        const newPriceLabel = document.getElementById("newPriceLabel");
+        const badge = document.getElementById("priceChangeBadge");
 
-window.addEventListener("load", () => {
-    drawPayoffChart("CALL", 200, 7.8);
-    updateSliderLabels(null, null, null);
-});
+        simSpotLabel.textContent = simSpot ? simSpot.toFixed(2) : "-";
+        newPriceLabel.textContent = (typeof newPrice === "number") ? newPrice.toFixed(4) : "-";
+
+        if (typeof newPrice === "number" && typeof origPrice === "number") {
+            const diff = newPrice - origPrice;
+            if (Math.abs(diff) < 1e-6) {
+                badge.textContent = "Price unchanged";
+                badge.className = "badge";
+            } else if (diff > 0) {
+                badge.textContent = "Price increased +" + diff.toFixed(4);
+                badge.className = "badge badge-up";
+            } else {
+                badge.textContent = "Price decreased " + diff.toFixed(4);
+                badge.className = "badge badge-down";
+            }
+        } else {
+            badge.textContent = "";
+            badge.className = "badge";
+        }
+    }
+
+    let sliderCallTimeout = null;
+
+    function onSpotSliderChange() {
+        if (!baseSpotForSlider) {
+            // No baseline yet – nothing to simulate
+            updateSliderLabels(null, null, null);
+            return;
+        }
+
+        const slider = document.getElementById("spotSlider");
+        const pct = parseFloat(slider.value); // 50–150
+        const newSpot = baseSpotForSlider * (pct / 100.0);
+
+        // Update spot label immediately, but don't hit backend yet
+        updateSliderLabels(newSpot, baseTheoreticalPrice, null);
+
+        // Debounce: wait a short time after user stops moving the slider
+        if (sliderCallTimeout) {
+            clearTimeout(sliderCallTimeout);
+        }
+
+        sliderCallTimeout = setTimeout(() => {
+            callSliderPricing(newSpot);
+        }, 300);
+    }
+
+    async function callSliderPricing(newSpot) {
+        const payload = {
+            symbol: document.getElementById("symbol").value,
+            instrumentType: document.getElementById("instrumentType").value,
+            optionType: document.getElementById("optionType").value,
+            spotPrice: newSpot,
+            strikePrice: parseFloat(document.getElementById("strikePrice").value),
+            riskFreeRate: parseFloat(document.getElementById("riskFreeRate").value),
+            volatility: parseFloat(document.getElementById("volatility").value),
+            timeToMaturityYears: parseFloat(document.getElementById("timeToMaturity").value),
+            numberOfContracts: parseFloat(document.getElementById("numberOfContracts").value || "0")
+        };
+
+        try {
+            const response = await fetch("/api/options/explain", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            // Now we have the new theoretical price for this simulated spot
+            updateSliderLabels(newSpot, baseTheoreticalPrice, data.price);
+        } catch (err) {
+            // Backend failed – keep labels but note we don't have a new price
+            updateSliderLabels(newSpot, baseTheoreticalPrice, null);
+        }
+    }
+
+    function renderExplanation(text) {
+        const container = document.getElementById("explanation");
+        container.innerHTML = "";
+
+        if (!text) {
+            container.textContent = "No explanation returned.";
+            return;
+        }
+
+        // Split on blank lines into paragraphs
+        const parts = text.split(/\n{2,}/);
+
+        parts.forEach(part => {
+            const trimmed = part.trim();
+            if (!trimmed) return;
+
+            const p = document.createElement("p");
+            p.textContent = trimmed;
+            container.appendChild(p);
+        });
+    }
+
+    function drawPayoffChart(optionType, strike, premium) {
+        const canvas = document.getElementById("payoffCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const width = canvas.width = canvas.clientWidth;
+        const height = canvas.height = canvas.clientHeight;
+
+        ctx.clearRect(0, 0, width, height);
+
+        const S_min = Math.max(0, strike * 0.5);
+        const S_max = strike * 1.5;
+
+        const points = [];
+        const steps = 100;
+        let minPayoff = Infinity;
+        let maxPayoff = -Infinity;
+
+        for (let i = 0; i <= steps; i++) {
+            const S = S_min + (S_max - S_min) * (i / steps);
+            let payoff;
+            if (optionType === "CALL") {
+                payoff = Math.max(S - strike, 0) - (premium || 0);
+            } else {
+                payoff = Math.max(strike - S, 0) - (premium || 0);
+            }
+            points.push({S, payoff});
+            if (payoff < minPayoff) minPayoff = payoff;
+            if (payoff > maxPayoff) maxPayoff = payoff;
+        }
+
+        if (minPayoff === maxPayoff) {
+            minPayoff -= 1;
+            maxPayoff += 1;
+        }
+
+        const padding = 40;
+
+        function xScale(S) {
+            return padding + (S - S_min) * (width - 2 * padding) / (S_max - S_min);
+        }
+        function yScale(payoff) {
+            return height - padding - (payoff - minPayoff) * (height - 2 * padding) / (maxPayoff - minPayoff);
+        }
+
+        // x-axis (P/L = 0)
+        ctx.strokeStyle = "#c0c7d6";
+        ctx.beginPath();
+        const yZero = yScale(0);
+        ctx.moveTo(padding, yZero);
+        ctx.lineTo(width - padding, yZero);
+        ctx.stroke();
+
+        // payoff line
+        ctx.beginPath();
+        ctx.moveTo(xScale(S_min), yScale(points[0].payoff));
+        for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(xScale(points[i].S), yScale(points[i].payoff));
+        }
+        ctx.strokeStyle = "#1f7aec";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // labels
+        ctx.fillStyle = "#000";
+        ctx.font = "12px Arial";
+        ctx.fillText("Underlying Price at Expiry", width / 2 - 70, height - 10);
+        ctx.save();
+        ctx.translate(10, height / 2 + 30);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText("Profit / Loss", 0, 0);
+        ctx.restore();
+    }
+
+    window.addEventListener("load", () => {
+        loadEquityDemo();
+        drawPayoffChart("CALL", 200, 7.8);
+        updateSliderLabels(null, null, null);
+    });
 </script>
 </body>
 </html>

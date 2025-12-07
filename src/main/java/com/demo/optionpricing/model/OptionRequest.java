@@ -5,23 +5,14 @@ import lombok.Data;
 
 @Data
 public class OptionRequest {
-    private InstrumentType instrumentType;
     @NotNull
+    private InstrumentType instrumentType;   // EQUITY_OPTION, BOND_FUTURE_OPTION, SOFR_FUTURE_OPTION
+    private OptionType optionType;               // CALL / PUT
+    private double spotPrice;                // see mapping below
+    private double strikePrice;
+    private double volatility;
+    private double riskFreeRate;
+    private double timeToMaturityYears;
+    private double numberOfContracts;             // scaling, esp. for futures
     private String symbol;
-
-    @NotNull
-    private OptionType optionType;
-
-    @NotNull
-    private Double spotPrice;
-    @NotNull
-    private Double strikePrice;
-    @NotNull
-    private Double riskFreeRate;
-    @NotNull
-    private Double volatility;
-    @NotNull
-    private Double timeToMaturity;
-
-    private Double marketPrice;
 }

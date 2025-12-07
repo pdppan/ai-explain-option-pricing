@@ -1,5 +1,6 @@
 package com.demo.optionpricing.service;
 
+import com.demo.optionpricing.model.InstrumentType;
 import com.demo.optionpricing.model.OptionRequest;
 import com.demo.optionpricing.model.OptionType;
 import org.junit.jupiter.api.Test;
@@ -18,10 +19,13 @@ public class OptionPricingServiceTest {
         req.setStrikePrice(100.0);
         req.setRiskFreeRate(0.05);
         req.setVolatility(0.2);
-        req.setTimeToMaturity(1.0);
+        req.setTimeToMaturityYears(1.0);
+        req.setInstrumentType(InstrumentType.SOFR_FUTURE_OPTION);
+        req.setNumberOfContracts(100);
 
         var res = svc.price(req);
-        assertTrue(res.getDelta() > 0.0 && res.getDelta() < 1.0);
-        assertTrue(res.getTheoreticalPrice() > 0.0);
+        double unitDelta = res.getDelta() / req.getNumberOfContracts();
+        assertTrue(unitDelta > 0.0 && unitDelta < 1.0);
+        assertTrue(res.getPrice() > 0.0);
     }
 }

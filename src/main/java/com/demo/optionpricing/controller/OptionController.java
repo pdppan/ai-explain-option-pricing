@@ -33,7 +33,7 @@ public class OptionController {
     public OptionResponse explain(@Valid @RequestBody OptionRequest request) {
         OptionResponse result = pricingService.price(request);
         String explanation = llmService.buildExplanation(request, result);
-        result.setLlmExplanation(explanation);
+        result.setExplanation(explanation);
         return result;
     }
 
@@ -64,11 +64,11 @@ public class OptionController {
                 req.setStrikePrice(Double.parseDouble(parts[3]));
                 req.setRiskFreeRate(Double.parseDouble(parts[4]));
                 req.setVolatility(Double.parseDouble(parts[5]));
-                req.setTimeToMaturity(Double.parseDouble(parts[6]));
-                req.setMarketPrice(Double.parseDouble(parts[7]));
+                req.setTimeToMaturityYears(Double.parseDouble(parts[6]));
+                //req.setPrice(Double.parseDouble(parts[7]));
 
                 OptionResponse res = pricingService.price(req);
-                res.setLlmExplanation(llmService.buildExplanation(req, res));
+                res.setExplanation(llmService.buildExplanation(req, res));
                 results.add(res);
             }
         }
