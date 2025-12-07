@@ -81,7 +81,7 @@ public class OptionPricingService {
         // For demo purposes, a consistent approximation:
         unitRho = -T * unitPrice;
 
-        double price = unitPrice * contractSize;
+        double price = unitPrice;
         double delta = unitDelta * contractSize;
         double gamma = unitGamma * contractSize;
         double vega  = unitVega  * contractSize;

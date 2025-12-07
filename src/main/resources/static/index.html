@@ -2,188 +2,947 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AI Explain Option Pricing</title>
+    <title>AI-Explained Option Pricing</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f9fc; }
-        h1 { color: #1f3a5f; }
-        .container {
-            max-width: 1100px;
-            background: #ffffff;
-            padding: 24px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        :root {
+            --bg-page: #eef2ff;
+            --bg-card: #ffffff;
+            --bg-soft: #f6f8ff;
+            --primary: #275df5;
+            --primary-dark: #1640b5;
+            --accent: #132043;
+            --accent-soft: #3b4b80;
+            --border-soft: #d0d7e2;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --accent-pill: #e0e7ff;
+            --negative: #b33939;
         }
-        label { display: block; margin-top: 12px; font-weight: bold; }
-        input, select {
-            width: 100%;
-            padding: 8px;
-            margin-top: 4px;
+
+        * {
             box-sizing: border-box;
         }
-        .row {
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            margin: 0;
+            padding: 20px 12px;
+            background: radial-gradient(circle at top left, #dde5ff, #eef2ff);
+            color: var(--text-main);
+        }
+
+        .page {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin: 0 0 6px;
+            color: var(--accent);
+            font-size: 24px;
+            letter-spacing: 0.02em;
+        }
+
+        .subtitle {
+            margin: 0 0 10px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .container {
+            position: relative;
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 18px 20px 20px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+
+        .header-row {
             display: flex;
-            gap: 24px;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .badge-header {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: var(--accent-pill);
+            color: var(--primary-dark);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .loading-bar {
+            height: 3px;
+            width: 100%;
+            background: linear-gradient(90deg, #275df5, #60a5fa, #275df5);
+            background-size: 200% 100%;
+            animation: loadingBar 1s linear infinite;
+            border-radius: 999px;
+            margin-bottom: 8px;
+        }
+
+        @keyframes loadingBar {
+            from { background-position: 0% 0; }
+            to   { background-position: 200% 0; }
+        }
+
+        .layout {
+            display: flex;
+            gap: 18px;
             flex-wrap: wrap;
         }
+
         .col {
-            flex: 1 1 260px;
+            flex: 1 1 320px;
+            min-width: 0;
         }
+
+        .panel {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e1e4f0;
+            padding: 12px 14px 14px;
+        }
+
+        .panel + .panel {
+            margin-top: 10px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 6px;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .panel-subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        label {
+            display: block;
+            margin-top: 8px;
+            margin-bottom: 2px;
+            font-weight: 600;
+            font-size: 11px;
+            color: var(--accent-soft);
+        }
+
+        label span.helper {
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border-soft);
+            font-size: 12px;
+            outline: none;
+            background-color: #f9fbff;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 1px rgba(39, 93, 245, 0.18);
+            background-color: #ffffff;
+        }
+
+        .field-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .field-row .field-flex {
+            flex: 1;
+        }
+
         button {
-            margin-top: 20px;
-            padding: 12px 18px;
-            font-size: 16px;
-            background: #1f7aec;
+            margin-top: 12px;
+            padding: 8px 14px;
+            font-size: 13px;
+            background: var(--primary);
             color: #fff;
             border: none;
-            border-radius: 4px;
+            border-radius: 999px;
             cursor: pointer;
+            font-weight: 600;
+            letter-spacing: 0.02em;
         }
-        button:hover { background: #155dcc; }
-        pre {
-            background: #f0f3f8;
-            padding: 16px;
-            overflow-x: auto;
-            border-radius: 4px;
+
+        button:hover {
+            background: var(--primary-dark);
         }
-        .footer { margin-top: 20px; font-size: 12px; color: #555; }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .btn-secondary {
+            background: #eef1ff;
+            color: var(--accent);
+            margin-left: 6px;
+        }
+
+        .btn-secondary:hover {
+            background: #dde4ff;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--accent-soft);
+            border-radius: 999px;
+            border: 1px dashed #c4c6f5;
+            padding-inline: 10px;
+            font-size: 11px;
+        }
+
+        .btn-ghost:hover {
+            background: #eef1ff;
+        }
+
+        .quick-demos {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 10px;
+            margin-bottom: 14px;
+            background: var(--bg-soft);
+            border-radius: 10px;
+            border: 1px solid #d5ddff;
+            font-size: 12px;
+        }
+
+        .quick-demos strong {
+            margin-right: 2px;
+            color: var(--accent);
+        }
+
+        .quick-demos span.text {
+            margin-right: 4px;
+        }
+
+        .quick-demos button {
+            margin-top: 0;
+            padding: 6px 10px;
+            font-size: 11px;
+            border-radius: 999px;
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid rgba(39, 93, 245, 0.6);
+        }
+
+        .quick-demos button:hover {
+            background: rgba(39, 93, 245, 0.06);
+        }
+
+        .quick-demos button.quick-demo-active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.05);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px 10px;
+            margin-top: 4px;
+            font-size: 12px;
+        }
+
+        .metric-label {
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            color: var(--accent-soft);
+        }
+
+        .metric-block-wide {
+            grid-column: 1 / -1;
+        }
+
+        .highlight-block {
+            margin-top: 6px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: #edf1ff;
+            border: 1px solid #c5cffb;
+        }
+
         #payoffCanvas {
             width: 100%;
-            height: 280px;
-            border: 1px solid #d0d7e2;
-            border-radius: 4px;
+            height: 180px;
+            border: 1px dashed var(--border-soft);
+            border-radius: 8px;
             background: #fafbff;
+            margin-top: 6px;
         }
+
         .slider-section {
-            margin-top: 24px;
-            padding: 16px;
-            background: #f6f8ff;
-            border-radius: 6px;
+            margin-top: 8px;
+            padding: 8px 9px 8px;
+            background: var(--bg-soft);
+            border-radius: 8px;
+            border: 1px solid #dde3ff;
+            font-size: 11px;
         }
+
+        .slider-section h4 {
+            margin: 0 0 2px;
+            font-size: 12px;
+            color: var(--accent-soft);
+        }
+
+        .slider-section p {
+            margin: 0 0 4px;
+            color: var(--text-muted);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 2px 0 4px;
+        }
+
         .badge {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-left: 8px;
+            padding: 3px 7px;
+            border-radius: 999px;
+            font-size: 10px;
+            margin-left: 6px;
+            border: 1px solid transparent;
         }
-        .badge-up { background: #e1f7e7; color: #1e824c; }
-        .badge-down { background: #ffe5e0; color: #b33939; }
+
+        .badge-up {
+            background: #e1f7e7;
+            color: #1e824c;
+            border-color: #b6e6c6;
+        }
+
+        .badge-down {
+            background: #ffe5e0;
+            color: var(--negative);
+            border-color: #f2b4a6;
+        }
+
+        #summary {
+            margin-top: 8px;
+            font-size: 12px;
+        }
+
+        #summary h3 {
+            margin-top: 4px;
+            margin-bottom: 4px;
+            font-size: 13px;
+            color: var(--accent-soft);
+        }
+
+        .greeks-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+            font-size: 11px;
+        }
+
+        .greeks-table th,
+        .greeks-table td {
+            padding: 4px 6px;
+            border-bottom: 1px solid #e1e4f0;
+            text-align: left;
+        }
+
+        .greeks-table th {
+            background: #d7defc;
+            font-weight: 700;
+            color: var(--accent-soft);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-size: 11.5px;
+        }
+
+        .greeks-table td:first-child {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--accent-soft);
+        }
+
+        .greeks-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        #explanation {
+            white-space: pre-wrap;
+            background: #f5f7ff;
+            padding: 10px 11px;
+            border-radius: 10px;
+            border: 1px solid #c5cffb;
+            border-left: 3px solid var(--primary);
+            font-size: 13px;
+            min-height: 64px;
+            line-height: 1.6;
+        }
+
+        #explanation p {
+            margin: 0 0 8px;
+        }
+
+        #explanation ul {
+            margin: 0 0 8px 18px;
+            padding: 0;
+        }
+
+        #explanation li {
+            margin-bottom: 4px;
+        }
+
+        .explanation-lead {
+            font-weight: 600;
+            color: var(--accent-soft);
+        }
+
+        .explanation-header-cta {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid rgba(39, 93, 245, 0.25);
+            border-top-color: var(--primary);
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-left: 6px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        details {
+            margin-top: 8px;
+            font-size: 11px;
+        }
+
+        summary {
+            cursor: pointer;
+            color: var(--accent-soft);
+        }
+
+        pre {
+            background: #020617;
+            color: #e5e7f5;
+            padding: 8px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 10px;
+        }
+
+        .footer {
+            margin-top: 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .footer span.highlight {
+            font-weight: 600;
+            color: var(--accent-soft);
+        }
+
+        /* Full-screen loading overlay for Explain Option */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .loading-card {
+            min-width: 260px;
+            max-width: 320px;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 14px 16px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.35);
+            border: 1px solid #d4dcff;
+        }
+
+        .loading-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-soft);
+            margin-bottom: 6px;
+        }
+
+        .loading-caption {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .loading-progress-track {
+            width: 100%;
+            height: 6px;
+            border-radius: 999px;
+            background: #e5e7eb;
+            overflow: hidden;
+        }
+
+        .loading-progress-bar {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #275df5, #60a5fa);
+            width: 0%;
+            transition: width 0.2s ease-out;
+        }
+
+        .loading-percent {
+            margin-top: 4px;
+            font-size: 11px;
+            color: var(--accent-soft);
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* How-to modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 998;
+        }
+
+        .modal-card {
+            max-width: 420px;
+            width: 90%;
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 14px 16px 16px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.4);
+            border: 1px solid #d4dcff;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .modal-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-soft);
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0 4px;
+        }
+
+        .modal-body {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .modal-body ul {
+            margin: 6px 0 0 18px;
+            padding: 0;
+        }
+
+        .modal-body li {
+            margin-bottom: 4px;
+        }
+
+        .modal-footer {
+            margin-top: 10px;
+            text-align: right;
+        }
+
+        .modal-footer button {
+            margin-top: 0;
+            padding-inline: 12px;
+            font-size: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 14px 12px 16px;
+            }
+        }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>AI Explain Option Pricing</h1>
-    <p>
-        Enter option parameters to view theoretical pricing, risk sensitivities (Greeks), and an AI-driven explanation.
-        Use the payoff chart and interactive slider to understand how option value responds to underlying price movements.
-    </p>
-    <div style="margin-bottom:16px; padding:12px; background:#f6f8ff; border-radius:6px;">
-        <strong>Quick Demos:</strong>
-        <button onclick="loadEquityDemo()" style="margin-left:8px;">Equity Option</button>
-        <button onclick="loadBondFutureDemo()" style="margin-left:6px;">Bond Futures Option</button>
-        <button onclick="loadSofrFutureDemo()" style="margin-left:6px;">SOFR Futures Option</button>
-    </div>
+<div class="page">
+    <div class="container">
+        <div class="header-row">
+            <div class="badge-header">Option Analytics · LLM-Powered</div>
+            <button type="button" class="btn-ghost" onclick="openHowToModal()">
+                How to use this demo
+            </button>
+        </div>
+        <div id="loadingBar" class="loading-bar" style="display:none;"></div>
+        <h1 style="text-align: center;">AI-Explained Option Pricing</h1>
+        <p class="subtitle">
+            Provide option inputs to compute theoretical pricing and Greeks, accompanied by an LLM-generated plain-language explanation. The interface prioritizes pricing summaries and explanations for effective demonstrations.
+        </p>
 
-    <div class="row">
-        <div class="col">
-            <label>Instrument Type</label>
-            <select id="instrumentType">
-                <option value="EQUITY_OPTION">Equity Option</option>
-                <option value="BOND_FUTURE_OPTION">Bond Futures Option</option>
-                <option value="SOFR_FUTURE_OPTION">SOFR Futures Option</option>
-            </select>
-
-            <label>Symbol</label>
-            <input id="symbol" value="AAPL">
-
-            <label>Option Type</label>
-            <select id="optionType">
-                <option value="CALL">CALL</option>
-                <option value="PUT">PUT</option>
-            </select>
-
-            <label>Underlying Price (spot or futures)</label>
-            <input id="spotPrice" type="number" step="0.01" value="195">
-
-            <label>Strike Price</label>
-            <input id="strikePrice" type="number" step="0.01" value="200">
-
-            <label>Risk-Free Rate (decimal)</label>
-            <input id="riskFreeRate" type="number" step="0.001" value="0.045">
-
-            <label>Volatility (decimal)</label>
-            <input id="volatility" type="number" step="0.01" value="0.25">
-
-            <label>Time to Maturity (years)</label>
-            <input id="timeToMaturity" type="number" step="0.01" value="0.25">
-
-            <label>Number of Contracts (lot)</label>
-            <input id="numberOfContracts" type="number" step="1" value="100">
-
-            <button onclick="explainOption()">Explain Option</button>
+        <div class="quick-demos">
+            <strong>Quick demos:</strong>
+            <span class="text">Load a scenario, then click “Explain Option”.</span>
+            <button type="button" id="demoSofr" onclick="loadSofrFutureDemo()">SOFR Futures Option</button>
+            <button type="button" id="demoBond" onclick="loadBondFutureDemo()">Bond Futures Option</button>
+            <button type="button" id="demoEquity" onclick="loadEquityDemo()">Equity Option</button>
         </div>
 
-        <div class="col">
-            <h3>Payoff at Expiry</h3>
-            <canvas id="payoffCanvas"></canvas>
+        <div class="layout">
+            <!-- LEFT COLUMN: INPUT + PAYOFF -->
+            <div class="col">
+                <!-- INPUT PANEL -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">Input Parameters</div>
+                            <div class="panel-subtitle">Define the option you want to analyze.</div>
+                        </div>
+                    </div>
 
-            <div class="slider-section">
-                <h4>Why did the price change?</h4>
-                <p style="margin-top: 0;">
-                    Move the underlying price and see how the theoretical option price responds.
-                </p>
-                <label>
-                    Spot Move (% of original)
-                </label>
-                <input id="spotSlider" type="range" min="50" max="150" value="100" oninput="onSpotSliderChange()">
-                <div>
-                    Current simulated spot:
-                    <span id="simSpotLabel"></span>
-                    <span id="priceChangeBadge" class="badge"></span>
+                    <label for="instrumentType">Instrument Type</label>
+                    <select id="instrumentType">
+                        <option value="EQUITY_OPTION">Equity Option</option>
+                        <option value="BOND_FUTURE_OPTION">Bond Futures Option</option>
+                        <option value="SOFR_FUTURE_OPTION">SOFR Futures Option</option>
+                    </select>
+
+                    <div class="field-row">
+                        <div class="field-flex">
+                            <label for="symbol">Symbol <span class="helper">(optional)</span></label>
+                            <input id="symbol" value="SOFR Mar-26">
+                        </div>
+                        <div class="field-flex">
+                            <label for="optionType">Option Type</label>
+                            <select id="optionType">
+                                <option value="CALL">CALL</option>
+                                <option value="PUT">PUT</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+                        <div class="field-flex">
+                            <label for="spotPrice">Underlying Price <span class="helper">(spot or futures)</span></label>
+                            <input id="spotPrice" type="number" step="0.01" value="95.50">
+                        </div>
+                        <div class="field-flex">
+                            <label for="strikePrice">Strike Price</label>
+                            <input id="strikePrice" type="number" step="0.01" value="95.25">
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+                        <div class="field-flex">
+                            <label for="riskFreeRate">Risk-Free Rate <span class="helper">(decimal)</span></label>
+                            <input id="riskFreeRate" type="number" step="0.001" value="0.045">
+                        </div>
+                        <div class="field-flex">
+                            <label for="volatility">Volatility <span class="helper">(decimal)</span></label>
+                            <input id="volatility" type="number" step="0.01" value="0.60">
+                        </div>
+                    </div>
+
+                    <div class="field-row">
+                        <div class="field-flex">
+                            <label for="timeToMaturity">Time to Maturity <span class="helper">(years)</span></label>
+                            <input id="timeToMaturity" type="number" step="0.01" value="0.25">
+                        </div>
+                        <div class="field-flex">
+                            <label for="numberOfContracts">Number of Contracts <span class="helper">(lot size)</span></label>
+                            <input id="numberOfContracts" type="number" step="1" value="100">
+                        </div>
+                    </div>
+
+                    <div>
+                        <button type="button" id="explainBtn" onclick="explainOption()">
+                            Explain Option
+                        </button>
+                        <button type="button" class="btn-secondary" onclick="resetResults()">
+                            Clear Results
+                        </button>
+                        <span id="loadingSpinner" class="spinner" style="display:none;"></span>
+                    </div>
                 </div>
-                <div>
-                    Original price: <span id="origPriceLabel">-</span><br>
-                    New price: <span id="newPriceLabel">-</span>
+
+                <!-- PAYOFF & SLIDER (left-bottom) -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">Payoff & Sensitivities</div>
+                            <div class="panel-subtitle">Visual payoff profile and price response.</div>
+                        </div>
+                    </div>
+
+                    <canvas id="payoffCanvas"></canvas>
+
+                    <div id="sliderSection" class="slider-section">
+                        <h4>Spot Move Simulator</h4>
+                        <p>
+                            Move the underlying price and see how the theoretical option price responds.
+                            The backend is called only after you pause sliding briefly.
+                        </p>
+                        <label for="spotSlider">
+                            Spot Move (% of original)
+                        </label>
+                        <input id="spotSlider" type="range" min="50" max="150" value="100" oninput="onSpotSliderChange()">
+                        <div style="margin-top: 2px;">
+                            Current simulated spot:
+                            <span id="simSpotLabel">-</span>
+                            <span id="priceChangeBadge" class="badge"></span>
+                        </div>
+                        <div style="margin-top: 2px;">
+                            Original price: <span id="origPriceLabel">-</span><br>
+                            New price: <span id="newPriceLabel">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: PRICING + AI EXPLANATION -->
+            <div class="col">
+                <!-- PRICING SUMMARY & GREEKS (top-right) -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">Pricing Summary & Greeks</div>
+                            <div class="panel-subtitle">Headline model results for the current scenario.</div>
+                        </div>
+                    </div>
+
+                    <div id="summary" style="display:none;">
+                        <div class="highlight-block">
+                            <h3>Pricing Summary</h3>
+
+                            <div class="metrics-grid">
+                                <div class="metric-block-wide">
+                                    <div class="metric-label">Position</div>
+                                    <div class="metric-value" id="positionSummary"></div>
+                                </div>
+                                <div>
+                                    <div class="metric-label">Theoretical Price (per contract)</div>
+                                    <div class="metric-value" id="price"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="highlight-block" style="margin-top:6px;">
+                            <h3>Greeks</h3>
+                            <table class="greeks-table">
+                                <thead>
+                                <tr>
+                                    <th>Greek</th>
+                                    <th>Value</th>
+                                    <th>Unit</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>Delta</td>
+                                    <td id="delta"></td>
+                                    <td>$ per $1 move</td>
+                                </tr>
+                                <tr>
+                                    <td>Gamma</td>
+                                    <td id="gamma"></td>
+                                    <td>Δ per $1 move</td>
+                                </tr>
+                                <tr>
+                                    <td>Theta</td>
+                                    <td id="theta"></td>
+                                    <td>$ per calendar day</td>
+                                </tr>
+                                <tr>
+                                    <td>Vega</td>
+                                    <td id="vega"></td>
+                                    <td>$ per 1% vol</td>
+                                </tr>
+                                <tr>
+                                    <td>Rho</td>
+                                    <td id="rho"></td>
+                                    <td>$ per 1% rate</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="summaryPlaceholder" style="font-size:11px;color:var(--text-muted);">
+                        Run a pricing request to view summary and Greeks.
+                    </div>
+                </div>
+
+                <!-- AI EXPLANATION (below pricing) -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">AI Explanation</div>
+                            <div class="panel-subtitle">What is driving this option’s value?</div>
+                        </div>
+                        <div class="explanation-header-cta">
+                            Designed to be read live in a client or demo meeting.
+                        </div>
+                    </div>
+                    <div id="explanation">Waiting for explanation...</div>
+
+                    <details style="margin-top:6px;">
+                        <summary><strong>Raw AI data (JSON)</strong></summary>
+                        <pre id="output"></pre>
+                    </details>
                 </div>
             </div>
         </div>
-    </div>
 
-    <h2>Summary</h2>
-
-    <div id="summary" style="display:none;">
-        <p><strong>Symbol:</strong> <span id="sym"></span></p>
-        <p><strong>Instrument:</strong> <span id="instr"></span></p>
-        <p><strong>Option:</strong> <span id="otype"></span></p>
-        <p><strong>Contract Size:</strong> <span id="csz"></span></p>
-        <p><strong>Theoretical Price:</strong> <span id="price"></span></p>
-
-        <h3>Greeks</h3>
-        <ul>
-            <li>Delta: <span id="delta"></span></li>
-            <li>Gamma: <span id="gamma"></span></li>
-            <li>Theta (cal day): <span id="theta"></span></li>
-            <li>Vega: <span id="vega"></span></li>
-            <li>Rho: <span id="rho"></span></li>
-        </ul>
-    </div>
-
-    <h2>AI Explanation</h2>
-    <div id="explanation"
-         style="white-space:pre-wrap;background:#f6f8ff;padding:16px;border-radius:6px;">
-        Waiting for explanation...
-    </div>
-
-    <details style="margin-top:20px;">
-        <summary><strong>Raw API JSON (for debugging)</strong></summary>
-        <pre id="output"></pre>
-    </details>
-
-    <div class="footer">
-        Backend: Spring Boot | Pricing: Black–Scholes & Black–76 | Explanation: LLM |
-        Frontend: Vanilla HTML + JS for demos
+        <div class="footer">
+            <span>
+                <span class="highlight">Backend:</span> Spring Boot ·
+                <span class="highlight">Models:</span> Black–Scholes &amp; Black–76 ·
+                <span class="highlight">LLM:</span> AI-generated explanation
+            </span>
+            <span class="highlight">
+                <span style="cursor:pointer;" onclick="openFormulaModal()">Option Pricing Formulae</span>
+            </span>
+            <span>
+                <span class="highlight">GitHub:</span> pdppan
+            </span>
+        </div>
     </div>
 </div>
+
+<!-- Full-screen loading overlay for Explain Option -->
+<div id="loadingOverlay" class="loading-overlay" style="display:none;">
+    <div class="loading-card">
+        <div class="loading-title">Running option model…</div>
+        <div class="loading-caption">Crunching pricing, Greeks, and explanation.</div>
+        <div class="loading-progress-track">
+            <div id="loadingProgressBar" class="loading-progress-bar"></div>
+        </div>
+        <div class="loading-percent" id="loadingPercentLabel">0%</div>
+    </div>
+</div>
+
+<!-- How-to modal -->
+<div id="howToModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title">How to use this demo</div>
+            <button class="modal-close" onclick="closeHowToModal()" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <ul>
+                <li>Start with a quick demo scenario or enter your own parameters.</li>
+                <li>Click <strong>Explain Option</strong> to calculate price and Greeks and generate an AI explanation.</li>
+                <li>Review the Pricing Summary and Greeks on the right to understand the risk profile.</li>
+                <li>Use the payoff chart and slider on the left to see how the option responds to moves in the underlying.</li>
+                <li>Read the AI explanation as a narrative you can use with clients or stakeholders.</li>
+            </ul>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeHowToModal()">Got it</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- Option Pricing Formulae modal -->
+<div id="formulaModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title">Option Pricing Formulae</div>
+            <button class="modal-close" onclick="closeFormulaModal()" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p><strong>European Call Option (Black–Scholes)</strong></p>
+            <p>
+                C = S<sub>0</sub>N(d<sub>1</sub>) − K e<sup>−rT</sup> N(d<sub>2</sub>)
+            </p>
+
+            <p><strong>European Put Option (Black–Scholes)</strong></p>
+            <p>
+                P = K e<sup>−rT</sup> N(−d<sub>2</sub>) − S<sub>0</sub> N(−d<sub>1</sub>)
+            </p>
+
+            <p><strong>d<sub>1</sub> and d<sub>2</sub></strong></p>
+            <p>
+                d<sub>1</sub> =
+                [ln(S<sub>0</sub>/K) + (r + ½σ²)T] / (σ√T)<br>
+                d<sub>2</sub> = d<sub>1</sub> − σ√T
+            </p>
+
+            <p><strong>Where</strong></p>
+            <ul>
+                <li>S<sub>0</sub> = current underlying price</li>
+                <li>K = strike price</li>
+                <li>r = risk-free rate (continuous)</li>
+                <li>T = time to maturity (years)</li>
+                <li>σ = volatility</li>
+                <li>N(·) = standard normal CDF</li>
+            </ul>
+
+            <p style="margin-top:8px;">
+                Equity options use Black–Scholes; futures options apply Black–76 conventions.
+            </p>
+
+            <p><strong>Core Greeks (under Black–Scholes)</strong></p>
+            <ul>
+                <li><strong>Delta (Δ)</strong> — Call: Δ = N(d<sub>1</sub>), Put: Δ = N(d<sub>1</sub>) − 1</li>
+                <li><strong>Gamma (Γ)</strong> — Γ = N'(d<sub>1</sub>) / (S<sub>0</sub> σ √T)</li>
+                <li><strong>Vega</strong> — Vega = S<sub>0</sub> N'(d<sub>1</sub>) √T</li>
+                <li><strong>Theta (per year)</strong> — Call and put formulas use combinations of N(d<sub>1</sub>), N(d<sub>2</sub>), r, and σ</li>
+                <li><strong>Rho (ρ)</strong> — Sensitivity of option value to a 1-unit change in interest rate r</li>
+            </ul>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeFormulaModal()">Close</button>
+        </div>
+    </div>
+</div>
+
 
 <script>
     const currencyFmt = new Intl.NumberFormat("en-US", {
@@ -202,7 +961,176 @@
     let baseSpotForSlider = null;
     let baseTheoreticalPrice = null;
 
+    // Slider config controlled by backend / application.properties
+    let sliderEnabled = true;
+    let sliderMinPercent = 50;
+    let sliderMaxPercent = 150;
+    let sliderDebounceMs = 300;
+
+    async function loadUiConfig() {
+        try {
+            const resp = await fetch("/api/options/ui-config");
+            if (!resp.ok) return;
+            const cfg = await resp.json();
+
+            sliderEnabled = cfg.sliderEnabled !== undefined ? !!cfg.sliderEnabled : true;
+            sliderMinPercent = cfg.sliderMinPercent ?? 50;
+            sliderMaxPercent = cfg.sliderMaxPercent ?? 150;
+            sliderDebounceMs = cfg.sliderDebounceMs ?? 300;
+
+            const slider = document.getElementById("spotSlider");
+            const sliderSection = document.getElementById("sliderSection");
+
+            if (!sliderEnabled) {
+                if (sliderSection) sliderSection.style.display = "none";
+            } else {
+                if (slider) {
+                    slider.min = sliderMinPercent;
+                    slider.max = sliderMaxPercent;
+                }
+                if (sliderSection) sliderSection.style.display = "block";
+            }
+        } catch (e) {
+            console.warn("Failed to load UI config, using defaults", e);
+        }
+    }
+
+    // For full-screen overlay progress (Explain Option)
+    let loadingInterval = null;
+    let fakePercent = 0;
+
+    function setLoading(isLoading) {
+        const bar = document.getElementById("loadingBar");
+        const spinner = document.getElementById("loadingSpinner");
+        const explainBtn = document.getElementById("explainBtn");
+
+        if (isLoading) {
+            if (bar) bar.style.display = "block";
+            if (spinner) spinner.style.display = "inline-block";
+            if (explainBtn) explainBtn.disabled = true;
+        } else {
+            if (bar) bar.style.display = "none";
+            if (spinner) spinner.style.display = "none";
+            if (explainBtn) explainBtn.disabled = false;
+        }
+    }
+
+    function startFullLoading() {
+        setLoading(true);
+
+        const overlay = document.getElementById("loadingOverlay");
+        const bar = document.getElementById("loadingProgressBar");
+        const label = document.getElementById("loadingPercentLabel");
+        fakePercent = 3;
+
+        if (overlay && bar && label) {
+            overlay.style.display = "flex";
+            bar.style.width = fakePercent + "%";
+            label.textContent = fakePercent + "%";
+
+            if (loadingInterval) clearInterval(loadingInterval);
+            loadingInterval = setInterval(() => {
+                fakePercent += Math.random() * 7 + 2; // 2–9%
+                if (fakePercent > 92) fakePercent = 92;
+                bar.style.width = fakePercent.toFixed(0) + "%";
+                label.textContent = fakePercent.toFixed(0) + "%";
+            }, 220);
+        }
+    }
+
+    function stopFullLoading() {
+        const overlay = document.getElementById("loadingOverlay");
+        const bar = document.getElementById("loadingProgressBar");
+        const label = document.getElementById("loadingPercentLabel");
+
+        if (loadingInterval) {
+            clearInterval(loadingInterval);
+            loadingInterval = null;
+        }
+
+        if (bar && label) {
+            bar.style.width = "100%";
+            label.textContent = "100%";
+        }
+
+        setTimeout(() => {
+            if (overlay) overlay.style.display = "none";
+            if (bar) bar.style.width = "0%";
+            if (label) label.textContent = "0%";
+        }, 250);
+
+        setLoading(false);
+    }
+
+    function resetResults() {
+        baseSpotForSlider = null;
+        baseTheoreticalPrice = null;
+
+        // Hide summary section
+        const summary = document.getElementById("summary");
+        const placeholder = document.getElementById("summaryPlaceholder");
+        if (summary) {
+            summary.style.display = "none";
+        }
+        if (placeholder) {
+            placeholder.style.display = "block";
+        }
+
+        // Reset explanation
+        const exp = document.getElementById("explanation");
+        if (exp) {
+            exp.innerHTML = "";
+            exp.textContent = "Waiting for explanation...";
+        }
+
+        // Clear raw JSON
+        const output = document.getElementById("output");
+        if (output) {
+            output.textContent = "";
+        }
+
+        // Reset slider and labels
+        const slider = document.getElementById("spotSlider");
+        if (slider) {
+            slider.value = 100;
+        }
+        updateSliderLabels(null, null, null);
+        document.getElementById("origPriceLabel").textContent = "-";
+        document.getElementById("newPriceLabel").textContent = "-";
+
+        const badge = document.getElementById("priceChangeBadge");
+        badge.textContent = "";
+        badge.className = "badge";
+
+        // Clear payoff chart
+        const canvas = document.getElementById("payoffCanvas");
+        if (canvas && canvas.getContext) {
+            const ctx = canvas.getContext("2d");
+            const width = canvas.width = canvas.clientWidth;
+            const height = canvas.height = canvas.clientHeight;
+            ctx.clearRect(0, 0, width, height);
+        }
+
+        // Clear active demo highlight
+        document.querySelectorAll(".quick-demos button").forEach(btn => {
+            btn.classList.remove("quick-demo-active");
+        });
+    }
+
+    function setActiveDemo(buttonId) {
+        document.querySelectorAll(".quick-demos button").forEach(btn => {
+            btn.classList.remove("quick-demo-active");
+        });
+        const btn = document.getElementById(buttonId);
+        if (btn) {
+            btn.classList.add("quick-demo-active");
+        }
+    }
+
     function loadEquityDemo() {
+        resetResults();
+        setActiveDemo("demoEquity");
+
         document.getElementById("instrumentType").value = "EQUITY_OPTION";
         document.getElementById("symbol").value = "AAPL";
         document.getElementById("optionType").value = "CALL";
@@ -212,33 +1140,42 @@
         document.getElementById("volatility").value = "0.25";
         document.getElementById("timeToMaturity").value = "0.25";
         document.getElementById("numberOfContracts").value = "100";
-        document.getElementById("spotSlider").value = 100;
+
+        drawPayoffChart("CALL", 200, 0);
     }
 
     function loadBondFutureDemo() {
+        resetResults();
+        setActiveDemo("demoBond");
+
         document.getElementById("instrumentType").value = "BOND_FUTURE_OPTION";
         document.getElementById("symbol").value = "TYH5";
         document.getElementById("optionType").value = "CALL";
-        document.getElementById("spotPrice").value = "118.25";   // bond futures price
+        document.getElementById("spotPrice").value = "118.25";
         document.getElementById("strikePrice").value = "118.00";
         document.getElementById("riskFreeRate").value = "0.04";
         document.getElementById("volatility").value = "0.18";
         document.getElementById("timeToMaturity").value = "0.5";
-        document.getElementById("numberOfContracts").value = "100"; // example contract size
-        document.getElementById("spotSlider").value = 100;
+        document.getElementById("numberOfContracts").value = "100";
+
+        drawPayoffChart("CALL", 118.00, 0);
     }
 
     function loadSofrFutureDemo() {
+        resetResults();
+        setActiveDemo("demoSofr");
+
         document.getElementById("instrumentType").value = "SOFR_FUTURE_OPTION";
         document.getElementById("symbol").value = "SOFR Mar-26";
         document.getElementById("optionType").value = "CALL";
-        document.getElementById("spotPrice").value = "95.50";     // SOFR futures price
+        document.getElementById("spotPrice").value = "95.50";
         document.getElementById("strikePrice").value = "95.25";
         document.getElementById("riskFreeRate").value = "0.045";
         document.getElementById("volatility").value = "0.60";
-        document.getElementById("timeToMaturity").value = "0.25"; // 3 months
-        document.getElementById("numberOfContracts").value = "100"; // not notional
-        document.getElementById("spotSlider").value = 100;
+        document.getElementById("timeToMaturity").value = "0.25";
+        document.getElementById("numberOfContracts").value = "100";
+
+        drawPayoffChart("CALL", 95.25, 0);
     }
 
     async function explainOption() {
@@ -255,6 +1192,7 @@
         };
 
         document.getElementById("output").textContent = "Calling backend...";
+        startFullLoading();
 
         try {
             const response = await fetch("/api/options/explain", {
@@ -262,6 +1200,7 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
+
             const data = await response.json();
 
             // Baseline for slider
@@ -269,36 +1208,87 @@
             baseTheoreticalPrice = data.price;
 
             // Show summary section
-            document.getElementById("summary").style.display = "block";
+            const summary = document.getElementById("summary");
+            const placeholder = document.getElementById("summaryPlaceholder");
+            if (summary) summary.style.display = "block";
+            if (placeholder) placeholder.style.display = "none";
 
-            // Populate summary
-            document.getElementById("sym").textContent = data.symbol;
-            document.getElementById("instr").textContent = data.instrumentType;
-            document.getElementById("otype").textContent = data.optionType;
-            document.getElementById("csz").textContent = payload.numberOfContracts.toFixed(0);
-            document.getElementById("price").textContent = fmtCurrency(data.price);
+            // Populate concise position summary: symbol · instrument · option · strike · contracts
+            const posEl = document.getElementById("positionSummary");
+            if (posEl) {
+                const sym = data.symbol || payload.symbol || "";
+                const instr = data.instrumentType || payload.instrumentType || "";
+                const otype = data.optionType || payload.optionType || "";
+                const strike = (payload.strikePrice != null && !isNaN(payload.strikePrice))
+                    ? `Strike ${payload.strikePrice}`
+                    : "";
+                const contracts = (payload.numberOfContracts != null && !isNaN(payload.numberOfContracts))
+                    ? `${payload.numberOfContracts.toFixed(0)} contracts`
+                    : "";
+                const parts = [sym, instr, otype, strike, contracts].filter(Boolean);
+                posEl.textContent = parts.join(" · ");
+            }
 
-            // Greeks
-            document.getElementById("delta").textContent = fmtCurrency(data.delta) + " per $1 move";
-            document.getElementById("gamma").textContent = data.gamma.toFixed(6) + " per $²"; // unitless-ish
-            document.getElementById("theta").textContent = fmtCurrency(data.theta/365) + " per day";
-            document.getElementById("vega").textContent = fmtCurrency(data.vega) + " per 1% im vol";
-            document.getElementById("rho").textContent   = fmtCurrency(data.rho) + " per 1% rate";
+            // Theoretical price
+            const priceEl = document.getElementById("price");
+            if (priceEl) {
+                priceEl.textContent = fmtCurrency(data.price);
+                const negColorCss = getComputedStyle(document.documentElement).getPropertyValue("--negative") || "#b33939";
+                const posColorCss = getComputedStyle(document.documentElement).getPropertyValue("--accent-soft") || "#3b4b80";
+                priceEl.style.color = data.price < 0 ? negColorCss : posColorCss;
+            }
+
+            // Greeks with negative in red
+            const negColor = getComputedStyle(document.documentElement).getPropertyValue("--negative") || "#b33939";
+            const posColor = getComputedStyle(document.documentElement).getPropertyValue("--accent-soft") || "#3b4b80";
+
+            const deltaEl = document.getElementById("delta");
+            const gammaEl = document.getElementById("gamma");
+            const thetaEl = document.getElementById("theta");
+            const vegaEl = document.getElementById("vega");
+            const rhoEl = document.getElementById("rho");
+
+            if (deltaEl) {
+                deltaEl.textContent = fmtCurrency(data.delta);
+                deltaEl.style.color = data.delta < 0 ? negColor : posColor;
+            }
+            if (gammaEl) {
+                gammaEl.textContent = (data.gamma != null ? data.gamma.toFixed(6) : "-");
+                gammaEl.style.color = data.gamma < 0 ? negColor : posColor;
+            }
+            if (thetaEl) {
+                const thetaDay = data.theta / 365;
+                thetaEl.textContent = fmtCurrency(thetaDay);
+                thetaEl.style.color = thetaDay < 0 ? negColor : posColor;
+            }
+            if (vegaEl) {
+                vegaEl.textContent = fmtCurrency(data.vega);
+                vegaEl.style.color = data.vega < 0 ? negColor : posColor;
+            }
+            if (rhoEl) {
+                rhoEl.textContent = fmtCurrency(data.rho);
+                rhoEl.style.color = data.rho < 0 ? negColor : posColor;
+            }
 
             // AI explanation
             renderExplanation(data.explanation);
 
-            // Raw JSON (collapsed)
+            // Raw JSON
             document.getElementById("output").textContent =
                 JSON.stringify(data, null, 2);
 
             // Slider + payoff
-            document.getElementById("origPriceLabel").textContent = data.price.toFixed(4);
-            document.getElementById("spotSlider").value = 100;
+            document.getElementById("origPriceLabel").textContent =
+                (typeof data.price === "number" ? data.price.toFixed(4) : "-");
+            const slider = document.getElementById("spotSlider");
+            if (slider) slider.value = 100;
             updateSliderLabels(baseSpotForSlider, baseTheoreticalPrice, baseTheoreticalPrice);
             drawPayoffChart(payload.optionType, payload.strikePrice, data.price);
         } catch (err) {
-            document.getElementById("output").textContent = "Error calling backend: " + err;
+            document.getElementById("output").textContent =
+                "Error calling backend: " + err;
+        } finally {
+            stopFullLoading();
         }
     }
 
@@ -307,8 +1297,15 @@
         const newPriceLabel = document.getElementById("newPriceLabel");
         const badge = document.getElementById("priceChangeBadge");
 
-        simSpotLabel.textContent = simSpot ? simSpot.toFixed(2) : "-";
-        newPriceLabel.textContent = (typeof newPrice === "number") ? newPrice.toFixed(4) : "-";
+        simSpotLabel.textContent = (typeof simSpot === "number")
+            ? simSpot.toFixed(2)
+            : "-";
+
+        if (typeof newPrice === "number") {
+            newPriceLabel.textContent = newPrice.toFixed(4);
+        } else {
+            newPriceLabel.textContent = "-";
+        }
 
         if (typeof newPrice === "number" && typeof origPrice === "number") {
             const diff = newPrice - origPrice;
@@ -331,27 +1328,26 @@
     let sliderCallTimeout = null;
 
     function onSpotSliderChange() {
-        if (!baseSpotForSlider) {
-            // No baseline yet – nothing to simulate
+        const slider = document.getElementById("spotSlider");
+        if (!sliderEnabled || !baseSpotForSlider || !slider) {
             updateSliderLabels(null, null, null);
             return;
         }
 
-        const slider = document.getElementById("spotSlider");
-        const pct = parseFloat(slider.value); // 50–150
+        const pct = parseFloat(slider.value);
         const newSpot = baseSpotForSlider * (pct / 100.0);
 
         // Update spot label immediately, but don't hit backend yet
         updateSliderLabels(newSpot, baseTheoreticalPrice, null);
 
-        // Debounce: wait a short time after user stops moving the slider
+        // Debounce backend call
         if (sliderCallTimeout) {
             clearTimeout(sliderCallTimeout);
         }
 
         sliderCallTimeout = setTimeout(() => {
             callSliderPricing(newSpot);
-        }, 300);
+        }, sliderDebounceMs);
     }
 
     async function callSliderPricing(newSpot) {
@@ -367,6 +1363,7 @@
             numberOfContracts: parseFloat(document.getElementById("numberOfContracts").value || "0")
         };
 
+        setLoading(true);
         try {
             const response = await fetch("/api/options/explain", {
                 method: "POST",
@@ -374,11 +1371,13 @@
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
-            // Now we have the new theoretical price for this simulated spot
             updateSliderLabels(newSpot, baseTheoreticalPrice, data.price);
+            drawPayoffChart(payload.optionType, payload.strikePrice, data.price);
         } catch (err) {
             // Backend failed – keep labels but note we don't have a new price
             updateSliderLabels(newSpot, baseTheoreticalPrice, null);
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -391,21 +1390,65 @@
             return;
         }
 
-        // Split on blank lines into paragraphs
-        const parts = text.split(/\n{2,}/);
+        // Convert simple bullet-like lines into bullet lists, keep first paragraph as lead
+        const lines = text.split(/\r?\n/);
+        let currentParagraph = [];
+        let currentList = [];
+        let leadApplied = false;
 
-        parts.forEach(part => {
-            const trimmed = part.trim();
-            if (!trimmed) return;
-
+        function flushParagraph() {
+            if (currentParagraph.length === 0) return;
             const p = document.createElement("p");
-            p.textContent = trimmed;
+            p.textContent = currentParagraph.join(" ");
+            if (!leadApplied) {
+                p.classList.add("explanation-lead");
+                leadApplied = true;
+            }
             container.appendChild(p);
-        });
+            currentParagraph = [];
+        }
+
+        function flushList() {
+            if (currentList.length === 0) return;
+            const ul = document.createElement("ul");
+            currentList.forEach(item => {
+                const li = document.createElement("li");
+                li.textContent = item;
+                ul.appendChild(li);
+            });
+            container.appendChild(ul);
+            currentList = [];
+        }
+
+        for (const rawLine of lines) {
+            const line = rawLine.trim();
+            if (!line) {
+                // blank line breaks paragraph or list
+                flushParagraph();
+                flushList();
+                continue;
+            }
+
+            const bulletMatch = line.match(/^[-*•]\s+(.*)$/);
+            if (bulletMatch) {
+                // switch from paragraph to list
+                flushParagraph();
+                currentList.push(bulletMatch[1]);
+            } else {
+                // switch from list back to paragraph
+                flushList();
+                currentParagraph.push(line);
+            }
+        }
+
+        flushParagraph();
+        flushList();
     }
 
     function drawPayoffChart(optionType, strike, premium) {
         const canvas = document.getElementById("payoffCanvas");
+        if (!canvas || !canvas.getContext) return;
+
         const ctx = canvas.getContext("2d");
 
         const width = canvas.width = canvas.clientWidth;
@@ -417,7 +1460,7 @@
         const S_max = strike * 1.5;
 
         const points = [];
-        const steps = 100;
+        const steps = 80;
         let minPayoff = Infinity;
         let maxPayoff = -Infinity;
 
@@ -429,7 +1472,7 @@
             } else {
                 payoff = Math.max(strike - S, 0) - (premium || 0);
             }
-            points.push({S, payoff});
+            points.push({ S, payoff });
             if (payoff < minPayoff) minPayoff = payoff;
             if (payoff > maxPayoff) maxPayoff = payoff;
         }
@@ -439,7 +1482,7 @@
             maxPayoff += 1;
         }
 
-        const padding = 40;
+        const padding = 32;
 
         function xScale(S) {
             return padding + (S - S_min) * (width - 2 * padding) / (S_max - S_min);
@@ -450,6 +1493,7 @@
 
         // x-axis (P/L = 0)
         ctx.strokeStyle = "#c0c7d6";
+        ctx.lineWidth = 1;
         ctx.beginPath();
         const yZero = yScale(0);
         ctx.moveTo(padding, yZero);
@@ -462,25 +1506,46 @@
         for (let i = 1; i < points.length; i++) {
             ctx.lineTo(xScale(points[i].S), yScale(points[i].payoff));
         }
-        ctx.strokeStyle = "#1f7aec";
+        ctx.strokeStyle = "#275df5";
         ctx.lineWidth = 2;
         ctx.stroke();
 
         // labels
-        ctx.fillStyle = "#000";
-        ctx.font = "12px Arial";
-        ctx.fillText("Underlying Price at Expiry", width / 2 - 70, height - 10);
+        ctx.fillStyle = "#111827";
+        ctx.font = "10px Arial";
+        ctx.fillText("Underlying Price at Expiry", width / 2 - 60, height - 8);
         ctx.save();
-        ctx.translate(10, height / 2 + 30);
+        ctx.translate(10, height / 2 + 14);
         ctx.rotate(-Math.PI / 2);
         ctx.fillText("Profit / Loss", 0, 0);
         ctx.restore();
     }
 
+    function openHowToModal() {
+        const modal = document.getElementById("howToModal");
+        if (modal) modal.style.display = "flex";
+    }
+
+    
+    function openFormulaModal() {
+        const modal = document.getElementById("formulaModal");
+        if (modal) modal.style.display = "flex";
+    }
+
+    function closeFormulaModal() {
+        const modal = document.getElementById("formulaModal");
+        if (modal) modal.style.display = "none";
+    }
+
+    function closeHowToModal() {
+        const modal = document.getElementById("howToModal");
+        if (modal) modal.style.display = "none";
+    }
+
     window.addEventListener("load", () => {
-        loadEquityDemo();
-        drawPayoffChart("CALL", 200, 7.8);
-        updateSliderLabels(null, null, null);
+        loadUiConfig();
+        // Default to SOFR Futures scenario
+        loadSofrFutureDemo();
     });
 </script>
 </body>

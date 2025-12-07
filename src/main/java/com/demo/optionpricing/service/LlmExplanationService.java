@@ -39,8 +39,8 @@ public class LlmExplanationService {
     private static final String OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
     public LlmExplanationService() {
         var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5_000); // 5 seconds
-        factory.setReadTimeout(10_000);   // 10 seconds
+        factory.setConnectTimeout(10_000); // 10 seconds
+        factory.setReadTimeout(15_000);   // 15 seconds
         this.restTemplate = new RestTemplate(factory);
     }
     /**

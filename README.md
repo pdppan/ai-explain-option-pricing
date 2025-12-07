@@ -66,28 +66,41 @@ Combined Response: Numbers + Narrative
 **Request body**
 
 ```json
+
 {
-  "symbol": "TYH5",
+  "symbol": "SOFR Mar-26",
+  "instrumentType": "SOFR_FUTURE_OPTION",
+  "optionType": "CALL",
+  "spotPrice": 95.50,
+  "strikePrice": 95.25,
+  "timeToMaturityYears": 0.25,
+  "riskFreeRate": 0.045,
+  "volatility": 0.60,
+  "numberOfContracts": 100
+}
+
+{
+  "symbol": "US 10Y Treasury Jun-26",
   "instrumentType": "BOND_FUTURE_OPTION",
   "optionType": "CALL",
-  "spotPrice": 118.25,
-  "strikePrice": 118.00,
-  "riskFreeRate": 0.04,
+  "futuresPrice": 112.75,
+  "strikePrice": 113.00,
+  "timeToMaturityYears": 0.25,
+  "riskFreeRate": 0.045,
   "volatility": 0.18,
-  "timeToMaturity": 0.5,
-  "marketPrice": 1.45
+  "numberOfContracts": 100
 }
 
 {
   "symbol": "AAPL",
   "instrumentType": "EQUITY_OPTION",
   "optionType": "CALL",
-  "spotPrice": 195.0,
-  "strikePrice": 200.0,
+  "spotPrice": 175.50,
+  "strikePrice": 180.00,
+  "timeToMaturityYears": 0.50,
   "riskFreeRate": 0.045,
   "volatility": 0.25,
-  "timeToMaturity": 0.25,
-  "marketPrice": 7.80
+  "numberOfContracts": 100
 }
 ```
 
@@ -215,7 +228,7 @@ focus on the AI and pricing logic rather than tooling.
 
 ## 60-Second Pitch
 
-> “We built **AI Explain Option Pricing**, an explainable options pricing engine.  
+> “We built **AI-Explained Option Pricing**, an explainable options pricing engine.  
 > Under the hood it runs a transparent Black–Scholes model for any option you send it.  
 > On top of that, a GPT-4.1 model reads the full pricing context – including Greeks and mispricing – and returns a **trader-grade explanation** of what’s driving the price and risk, plus concrete risk-management suggestions.  
 > Instead of staring at Greeks, a trader or PM clicks once and gets a narrative they can act on.  
