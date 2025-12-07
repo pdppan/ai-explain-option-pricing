@@ -1,13 +1,13 @@
-package com.demo.aiexplainoptionpricing.service;
+package com.demo.optionpricing.service;
 
-import com.demo.aiexplainoptionpricing.model.OptionPricingResult;
-import com.demo.aiexplainoptionpricing.model.OptionRequest;
-import com.demo.aiexplainoptionpricing.model.OptionType;
+import com.demo.optionpricing.model.OptionResponse;
+import com.demo.optionpricing.model.OptionRequest;
+import com.demo.optionpricing.model.OptionType;
 import org.springframework.stereotype.Service;
-import com.demo.aiexplainoptionpricing.model.InstrumentType;
+import com.demo.optionpricing.model.InstrumentType;
 @Service
 public class OptionPricingService {
-    public OptionPricingResult price(OptionRequest req) {
+    public OptionResponse price(OptionRequest req) {
         InstrumentType instrumentType =
                 (req.getInstrumentType() != null) ? req.getInstrumentType() : InstrumentType.EQUITY_OPTION;
 
@@ -18,7 +18,7 @@ public class OptionPricingService {
         }
     }
 
-    public OptionPricingResult priceEquityOption(OptionRequest req,InstrumentType instrumentType) {
+    public OptionResponse priceEquityOption(OptionRequest req, InstrumentType instrumentType) {
         double S = req.getSpotPrice();
         double K = req.getStrikePrice();
         double r = req.getRiskFreeRate();
@@ -48,7 +48,7 @@ public class OptionPricingService {
         double vega = S * normPdf(d1) * sqrtT / 100.0;
         double theta = theta(S, K, r, sigma, T, d1, d2, req.getOptionType()) / 365.0;
 
-        OptionPricingResult result = new OptionPricingResult();
+        OptionResponse result = new OptionResponse();
         result.setSymbol(req.getSymbol());
         result.setOptionType(req.getOptionType());
         result.setTheoreticalPrice(price);
@@ -65,7 +65,7 @@ public class OptionPricingService {
         return result;
     }
 
-    private OptionPricingResult priceBondFutureOption(OptionRequest req, InstrumentType instrumentType) {
+    private OptionResponse priceBondFutureOption(OptionRequest req, InstrumentType instrumentType) {
         // For bond futures options we interpret spotPrice as the futures price F
         double F = req.getSpotPrice();
         double K = req.getStrikePrice();
@@ -104,7 +104,7 @@ public class OptionPricingService {
         double secondTerm = r * price; // rough approximation: carry from discounting
         double theta = (firstTerm - secondTerm) / 365.0;
 
-        OptionPricingResult result = new OptionPricingResult();
+        OptionResponse result = new OptionResponse();
         result.setInstrumentType(instrumentType);
         result.setSymbol(req.getSymbol());
         result.setOptionType(req.getOptionType());

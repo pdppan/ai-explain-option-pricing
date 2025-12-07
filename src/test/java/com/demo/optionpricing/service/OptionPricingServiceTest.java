@@ -1,7 +1,7 @@
-package com.demo.aiexplainoptionpricing.service;
+package com.demo.optionpricing.service;
 
-import com.demo.aiexplainoptionpricing.model.OptionRequest;
-import com.demo.aiexplainoptionpricing.model.OptionType;
+import com.demo.optionpricing.model.OptionRequest;
+import com.demo.optionpricing.model.OptionType;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

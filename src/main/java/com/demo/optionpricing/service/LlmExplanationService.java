@@ -1,7 +1,7 @@
-package com.demo.aiexplainoptionpricing.service;
+package com.demo.optionpricing.service;
 
-import com.demo.aiexplainoptionpricing.model.OptionPricingResult;
-import com.demo.aiexplainoptionpricing.model.OptionRequest;
+import com.demo.optionpricing.model.OptionResponse;
+import com.demo.optionpricing.model.OptionRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -29,7 +29,7 @@ public class LlmExplanationService {
     @Value("${openai.enable-logging:true}")
     private boolean enableLogging;
 
-    public String buildExplanation(OptionRequest request, OptionPricingResult result) {
+    public String buildExplanation(OptionRequest request, OptionResponse result) {
         String apiKey = System.getenv("OPENAI_API_KEY");
         if (apiKey == null || apiKey.isBlank()) {
             log.warn("OPENAI_API_KEY not set. Returning placeholder explanation.");
@@ -97,7 +97,7 @@ public class LlmExplanationService {
             return "Unable to generate explanation due to an internal error. Please try again.";
         }
     }
-    private String buildContextJson(OptionRequest req, OptionPricingResult res) throws JsonProcessingException {
+    private String buildContextJson(OptionRequest req, OptionResponse res) throws JsonProcessingException {
         Map<String, Object> payload = new java.util.LinkedHashMap<>();
 
         payload.put("symbol", req.getSymbol());

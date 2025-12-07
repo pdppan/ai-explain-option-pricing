@@ -1,4 +1,4 @@
-package com.demo.aiexplainoptionpricing.model;
+package com.demo.optionpricing.model;
 
 public enum InstrumentType {
     EQUITY_OPTION,

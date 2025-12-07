@@ -1,10 +1,10 @@
-package com.demo.aiexplainoptionpricing.controller;
+package com.demo.optionpricing.controller;
 
-import com.demo.aiexplainoptionpricing.model.OptionPricingResult;
-import com.demo.aiexplainoptionpricing.model.OptionRequest;
-import com.demo.aiexplainoptionpricing.model.OptionType;
-import com.demo.aiexplainoptionpricing.service.LlmExplanationService;
-import com.demo.aiexplainoptionpricing.service.OptionPricingService;
+import com.demo.optionpricing.model.OptionResponse;
+import com.demo.optionpricing.model.OptionRequest;
+import com.demo.optionpricing.model.OptionType;
+import com.demo.optionpricing.service.LlmExplanationService;
+import com.demo.optionpricing.service.OptionPricingService;
 import jakarta.validation.Valid;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.web.bind.annotation.*;
@@ -18,28 +18,28 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/options")
-public class OptionExplainController {
+public class OptionController {
 
     private final OptionPricingService pricingService;
     private final LlmExplanationService llmService;
 
-    public OptionExplainController(OptionPricingService pricingService,
-                                   LlmExplanationService llmService) {
+    public OptionController(OptionPricingService pricingService,
+                            LlmExplanationService llmService) {
         this.pricingService = pricingService;
         this.llmService = llmService;
     }
 
     @PostMapping("/explain")
-    public OptionPricingResult explain(@Valid @RequestBody OptionRequest request) {
-        OptionPricingResult result = pricingService.price(request);
+    public OptionResponse explain(@Valid @RequestBody OptionRequest request) {
+        OptionResponse result = pricingService.price(request);
         String explanation = llmService.buildExplanation(request, result);
         result.setLlmExplanation(explanation);
         return result;
     }
 
     @GetMapping("/batch-explain-sample")
-    public List<OptionPricingResult> batchExplainSample() throws IOException {
-        List<OptionPricingResult> results = new ArrayList<>();
+    public List<OptionResponse> batchExplainSample() throws IOException {
+        List<OptionResponse> results = new ArrayList<>();
         ClassPathResource resource = new ClassPathResource("sample-options.csv");
         try (BufferedReader reader = new BufferedReader(
             new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
@@ -67,7 +67,7 @@ public class OptionExplainController {
                 req.setTimeToMaturity(Double.parseDouble(parts[6]));
                 req.setMarketPrice(Double.parseDouble(parts[7]));
 
-                OptionPricingResult res = pricingService.price(req);
+                OptionResponse res = pricingService.price(req);
                 res.setLlmExplanation(llmService.buildExplanation(req, res));
                 results.add(res);
             }

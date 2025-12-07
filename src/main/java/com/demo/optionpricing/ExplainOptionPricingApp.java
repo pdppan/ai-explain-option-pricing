@@ -1,4 +1,4 @@
-package com.demo.aiexplainoptionpricing;
+package com.demo.optionpricing;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
