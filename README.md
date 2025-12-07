@@ -39,7 +39,7 @@ The LLM is **not** used as a calculator. It is a **reasoning and explanation lay
 ## High-Level Architecture
 
 ```text
-Client (UI / Postman / frontend/index.html)
+Client (UI / Postman / index.html)
       |
       v
 Spring Boot REST API  (/api/options/explain)
@@ -61,7 +61,7 @@ Combined Response: Numbers + Narrative
 
 ## API Summary
 
-### POST `/api/options/explain`
+### POST http://localhost:8080/api/options/explain
 
 **Request body**
 
@@ -173,12 +173,12 @@ curl http://localhost:8080/api/options/batch-explain-sample
 
 ---
 
-## Included Frontend (Hackathon Demo Ready)
+## Included Frontend for demo
 
 This repository includes a lightweight frontend for demos:
 
 ```text
-frontend/index.html
+.. springboot resources/static index.html
 ```
 
 ### Usage
@@ -187,7 +187,7 @@ frontend/index.html
    ```bash
    mvn spring-boot:run
    ```
-2. Open `frontend/index.html` in your browser.
+2. Open `http://localhost:8080/index.html` in your browser.
 3. Click **Load Demo Scenario** to auto-fill a realistic call option.
 4. Click **Explain Option** to see:
    - Pricing & Greeks
@@ -200,7 +200,7 @@ focus on the AI and pricing logic rather than tooling.
 
 ---
 
-## 60-Second Hackathon Pitch
+## 60-Second Pitch
 
 > “We built **AI Explain Option Pricing**, an explainable options pricing engine.  
 > Under the hood it runs a transparent Black–Scholes model for any option you send it.  
@@ -209,11 +209,3 @@ focus on the AI and pricing logic rather than tooling.
 > It’s auditable math plus an AI quant mentor, exposed as a simple REST microservice that any trading or education platform can plug into.”
 
 ---
-
-## Files Included
-
-- Full Spring Boot project source
-- `sample-options.csv` – sample input for batch endpoint
-- `frontend/index.html` – zero-build demo UI
-- `pitch.pdf` – one-page executive pitch
-- `pitch-deck.pptx` – short slide deck to present the project

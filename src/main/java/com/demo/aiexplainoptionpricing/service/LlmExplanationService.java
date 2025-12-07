@@ -97,38 +97,57 @@ public class LlmExplanationService {
             return "Unable to generate explanation due to an internal error. Please try again.";
         }
     }
-
     private String buildContextJson(OptionRequest req, OptionPricingResult res) throws JsonProcessingException {
-        Map<String, Object> payload = Map.of(
-            "symbol", req.getSymbol(),
-            "optionType", req.getOptionType().name(),
-            "inputs", Map.of(
-                "spotPrice", req.getSpotPrice(),
-                "strikePrice", req.getStrikePrice(),
-                "riskFreeRate", req.getRiskFreeRate(),
-                "volatility", req.getVolatility(),
-                "timeToMaturityYears", req.getTimeToMaturity(),
-                "marketPrice", req.getMarketPrice()
-            ),
-            "blackScholes", Map.of(
-                "theoreticalPrice", res.getTheoreticalPrice(),
-                "delta", res.getDelta(),
-                "gamma", res.getGamma(),
-                "thetaPerDay", res.getTheta(),
-                "vegaPer1PctVol", res.getVega(),
-                "mispricing", res.getMispricing()
-            )
-        );
+        // Top-level payload
+        Map<String, Object> payload = new java.util.LinkedHashMap<>();
+
+        payload.put("symbol", req.getSymbol());
+        payload.put("optionType", req.getOptionType() != null ? req.getOptionType().name() : null);
+
+        // Inputs section
+        Map<String, Object> inputs = new java.util.LinkedHashMap<>();
+        inputs.put("spotPrice", req.getSpotPrice());
+        inputs.put("strikePrice", req.getStrikePrice());
+        inputs.put("riskFreeRate", req.getRiskFreeRate());
+        inputs.put("volatility", req.getVolatility());
+        inputs.put("timeToMaturityYears", req.getTimeToMaturity());
+
+        // Only include marketPrice if present (avoid Map.of(null))
+        if (req.getMarketPrice() != null) {
+            inputs.put("marketPrice", req.getMarketPrice());
+        }
+
+        // Black–Scholes section
+        Map<String, Object> blackScholes = new java.util.LinkedHashMap<>();
+        blackScholes.put("theoreticalPrice", res.getTheoreticalPrice());
+        blackScholes.put("delta", res.getDelta());
+        blackScholes.put("gamma", res.getGamma());
+        blackScholes.put("thetaPerDay", res.getTheta());
+        blackScholes.put("vegaPer1PctVol", res.getVega());
+
+        // Only include mispricing if present
+        if (res.getMispricing() != null) {
+            blackScholes.put("mispricing", res.getMispricing());
+        }
+
+        payload.put("inputs", inputs);
+        payload.put("blackScholes", blackScholes);
+
         return objectMapper.writeValueAsString(payload);
     }
 
     private String buildPrompt(String contextJson) {
         return "Here is the JSON describing a single option and its Black-Scholes metrics:\n\n"
-            + contextJson + "\n\n"
-            + "Tasks:\n"
-            + "1) Explain why the option is priced at this level, focusing on volatility, time to expiry, and moneyness.\n"
-            + "2) Explain what the Greeks (delta, gamma, theta, vega) mean for this specific option.\n"
-            + "3) If marketPrice and mispricing are present, comment on whether the option looks rich or cheap.\n"
-            + "4) Give the user 2–3 concrete risk management suggestions in bullet points.\n";
+                + contextJson + "\n\n"
+                + "Tasks:\n"
+                + "1) Explain why the option is priced at this level, focusing on volatility, time to expiry, and moneyness.\n"
+                + "2) Explain what the Greeks (delta, gamma, theta, vega) mean for this specific option.\n"
+                + "3) If marketPrice and mispricing are present, comment on whether the option looks rich or cheap.\n"
+                + "4) Give the user 2–3 concrete risk management suggestions in bullet points.\n\n"
+                + "IMPORTANT FORMAT INSTRUCTIONS:\n"
+                + "- Write the answer in plain text, not Markdown.\n"
+                + "- Do NOT use **bold**, headings (#), or any asterisk-based formatting.\n"
+                + "- You may use simple numbered sections (1., 2., 3.) and hyphen bullets (-) only.\n";
     }
+
 }

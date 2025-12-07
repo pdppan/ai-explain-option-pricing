@@ -140,12 +140,39 @@
         </div>
     </div>
 
-    <h2>API Response</h2>
-    <pre id="output">Waiting for input...</pre>
+    <h2>Summary</h2>
+
+    <div id="summary" style="display:none;">
+        <p><strong>Symbol:</strong> <span id="sym"></span></p>
+        <p><strong>Option:</strong> <span id="otype"></span></p>
+        <p><strong>Theoretical Price:</strong> <span id="price"></span></p>
+        <p><strong>Market Price:</strong> <span id="mkt"></span></p>
+        <p><strong>Mispricing:</strong> <span id="mis"></span></p>
+
+        <h3>Greeks</h3>
+        <ul>
+            <li>Delta: <span id="delta"></span></li>
+            <li>Gamma: <span id="gamma"></span></li>
+            <li>Theta (per day): <span id="theta"></span></li>
+            <li>Vega (per 1% vol): <span id="vega"></span></li>
+        </ul>
+    </div>
+
+    <h2>AI Explanation</h2>
+    <div id="explanation"
+         style="white-space:pre-wrap;background:#f6f8ff;padding:16px;border-radius:6px;">
+        Waiting for explanation...
+    </div>
+
+    <details style="margin-top:20px;">
+        <summary><strong>Raw API JSON (for debugging)</strong></summary>
+        <pre id="output"></pre>
+    </details>
+
 
     <div class="footer">
         Backend: Spring Boot | Pricing: Black–Scholes | Explanation: LLM |
-        Frontend: Vanilla HTML + JS for hackathon demos
+        Frontend: Vanilla HTML + JS for demos
     </div>
 </div>
 
@@ -191,7 +218,40 @@ async function explainOption() {
         baseSpotForSlider = payload.spotPrice;
         baseTheoreticalPrice = data.theoreticalPrice;
 
-        document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+        // Show summary section
+    document.getElementById("summary").style.display = "block";
+
+    // Populate summary
+    document.getElementById("sym").textContent = data.symbol;
+    document.getElementById("otype").textContent = data.optionType;
+    document.getElementById("price").textContent = data.theoreticalPrice.toFixed(4);
+    document.getElementById("mkt").textContent =
+        data.marketPrice !== null ? data.marketPrice.toFixed(4) : "N/A";
+
+    if (data.mispricing !== null) {
+        const mp = data.mispricing;
+        const misEl = document.getElementById("mis");
+        misEl.textContent = mp.toFixed(4) + (mp > 0 ? " (Rich)" : " (Cheap)");
+        misEl.style.color = mp > 0 ? "#b33939" : "#1e824c";
+    } else {
+        document.getElementById("mis").textContent = "N/A";
+    }
+
+    // Greeks
+    document.getElementById("delta").textContent = data.delta.toFixed(4);
+    document.getElementById("gamma").textContent = data.gamma.toFixed(6);
+    document.getElementById("theta").textContent = data.theta.toFixed(6);
+    document.getElementById("vega").textContent = data.vega.toFixed(6);
+
+    // AI explanation
+    renderExplanation(data.llmExplanation);
+
+    // Raw JSON (collapsed)
+    document.getElementById("output").textContent =
+    JSON.stringify(data, null, 2);
+
+
+
         document.getElementById("origPriceLabel").textContent = data.theoreticalPrice.toFixed(4);
         document.getElementById("spotSlider").value = 100;
         updateSliderLabels(baseSpotForSlider, baseTheoreticalPrice, baseTheoreticalPrice);
@@ -257,6 +317,28 @@ async function onSpotSliderChange() {
     } catch (err) {
         updateSliderLabels(newSpot, baseTheoreticalPrice, null);
     }
+}
+
+function renderExplanation(text) {
+    const container = document.getElementById("explanation");
+    container.innerHTML = "";
+
+    if (!text) {
+        container.textContent = "No explanation returned.";
+        return;
+    }
+
+    // Split on blank lines into paragraphs
+    const parts = text.split(/\n{2,}/);
+
+    parts.forEach(part => {
+        const trimmed = part.trim();
+        if (!trimmed) return;
+
+        const p = document.createElement("p");
+        p.textContent = trimmed;
+        container.appendChild(p);
+    });
 }
 
 function drawPayoffChart(optionType, strike, premium) {
