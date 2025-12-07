@@ -1,9 +1,9 @@
 package com.demo.aiexplainoptionpricing.model;
 
 import jakarta.validation.constraints.NotNull;
-
+import com.demo.aiexplainoptionpricing.model.InstrumentType;
 public class OptionRequest {
-
+    private InstrumentType instrumentType;
     @NotNull
     private String symbol;
 
@@ -86,4 +86,12 @@ public class OptionRequest {
     public void setMarketPrice(Double marketPrice) {
         this.marketPrice = marketPrice;
     }
+    public InstrumentType getInstrumentType() {
+        return instrumentType;
+    }
+
+    public void setInstrumentType(InstrumentType instrumentType) {
+        this.instrumentType = instrumentType;
+    }
+
 }

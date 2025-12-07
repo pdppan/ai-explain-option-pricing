@@ -1,7 +1,7 @@
 package com.demo.aiexplainoptionpricing.model;
-
+import com.demo.aiexplainoptionpricing.model.InstrumentType;
 public class OptionPricingResult {
-
+    private InstrumentType instrumentType;
     private String symbol;
     private OptionType optionType;
 
@@ -95,4 +95,12 @@ public class OptionPricingResult {
     public void setLlmExplanation(String llmExplanation) {
         this.llmExplanation = llmExplanation;
     }
+    public InstrumentType getInstrumentType() {
+        return instrumentType;
+    }
+
+    public void setInstrumentType(InstrumentType instrumentType) {
+        this.instrumentType = instrumentType;
+    }
+
 }

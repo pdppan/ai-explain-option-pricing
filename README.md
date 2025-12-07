@@ -67,7 +67,20 @@ Combined Response: Numbers + Narrative
 
 ```json
 {
+  "symbol": "TYH5",
+  "instrumentType": "BOND_FUTURE_OPTION",
+  "optionType": "CALL",
+  "spotPrice": 118.25,
+  "strikePrice": 118.00,
+  "riskFreeRate": 0.04,
+  "volatility": 0.18,
+  "timeToMaturity": 0.5,
+  "marketPrice": 1.45
+}
+
+{
   "symbol": "AAPL",
+  "instrumentType": "EQUITY_OPTION",
   "optionType": "CALL",
   "spotPrice": 195.0,
   "strikePrice": 200.0,

@@ -98,49 +98,50 @@ public class LlmExplanationService {
         }
     }
     private String buildContextJson(OptionRequest req, OptionPricingResult res) throws JsonProcessingException {
-        // Top-level payload
         Map<String, Object> payload = new java.util.LinkedHashMap<>();
 
         payload.put("symbol", req.getSymbol());
         payload.put("optionType", req.getOptionType() != null ? req.getOptionType().name() : null);
+        payload.put("instrumentType", res.getInstrumentType() != null
+                ? res.getInstrumentType().name()
+                : "EQUITY_OPTION");
 
-        // Inputs section
         Map<String, Object> inputs = new java.util.LinkedHashMap<>();
-        inputs.put("spotPrice", req.getSpotPrice());
+        inputs.put("spotOrFuturesPrice", req.getSpotPrice());
         inputs.put("strikePrice", req.getStrikePrice());
         inputs.put("riskFreeRate", req.getRiskFreeRate());
         inputs.put("volatility", req.getVolatility());
         inputs.put("timeToMaturityYears", req.getTimeToMaturity());
 
-        // Only include marketPrice if present (avoid Map.of(null))
         if (req.getMarketPrice() != null) {
             inputs.put("marketPrice", req.getMarketPrice());
         }
 
-        // Black–Scholes section
         Map<String, Object> blackScholes = new java.util.LinkedHashMap<>();
         blackScholes.put("theoreticalPrice", res.getTheoreticalPrice());
         blackScholes.put("delta", res.getDelta());
         blackScholes.put("gamma", res.getGamma());
         blackScholes.put("thetaPerDay", res.getTheta());
         blackScholes.put("vegaPer1PctVol", res.getVega());
-
-        // Only include mispricing if present
         if (res.getMispricing() != null) {
             blackScholes.put("mispricing", res.getMispricing());
         }
 
         payload.put("inputs", inputs);
-        payload.put("blackScholes", blackScholes);
+        payload.put("modelMetrics", blackScholes);
 
         return objectMapper.writeValueAsString(payload);
     }
 
+
     private String buildPrompt(String contextJson) {
-        return "Here is the JSON describing a single option and its Black-Scholes metrics:\n\n"
+        return "Here is the JSON describing an option and its pricing metrics:\n\n"
                 + contextJson + "\n\n"
+                + "The field 'instrumentType' is either 'EQUITY_OPTION' or 'BOND_FUTURE_OPTION'.\n"
+                + "- For EQUITY_OPTION, the underlying is a stock price.\n"
+                + "- For BOND_FUTURE_OPTION, the underlying is a bond futures price and the option is priced with a Black-76 style approach.\n\n"
                 + "Tasks:\n"
-                + "1) Explain why the option is priced at this level, focusing on volatility, time to expiry, and moneyness.\n"
+                + "1) Explain why the option is priced at this level, focusing on volatility, time to expiry, and moneyness relative to the correct underlying.\n"
                 + "2) Explain what the Greeks (delta, gamma, theta, vega) mean for this specific option.\n"
                 + "3) If marketPrice and mispricing are present, comment on whether the option looks rich or cheap.\n"
                 + "4) Give the user 2–3 concrete risk management suggestions in bullet points.\n\n"
@@ -149,5 +150,6 @@ public class LlmExplanationService {
                 + "- Do NOT use **bold**, headings (#), or any asterisk-based formatting.\n"
                 + "- You may use simple numbered sections (1., 2., 3.) and hyphen bullets (-) only.\n";
     }
+
 
 }

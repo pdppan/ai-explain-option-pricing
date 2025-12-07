@@ -74,16 +74,23 @@
 <div class="container">
     <h1>AI Explain Option Pricing</h1>
     <p>
-        Enter option parameters and receive theoretical pricing, Greeks, and an AI-generated explanation.
-        Use the payoff chart and slider to see how the option reacts to price moves.
+        Enter option parameters to view theoretical pricing, risk sensitivities (Greeks), and an AI-driven explanation.
+        Use the payoff chart and interactive slider to understand how option value responds to underlying price movements.
     </p>
-
-    <div style="margin-bottom: 12px;">
-        <button onclick="loadDemo()">Load Demo Scenario</button>
+    <div style="margin-bottom:16px; padding:12px; background:#f6f8ff; border-radius:6px;">
+        <strong>Quick Demos:</strong>
+        <button onclick="loadEquityDemo()" style="margin-left:8px;">Equity Option</button>
+        <button onclick="loadBondFutureDemo()" style="margin-left:6px;">Bond Futures Option</button>
     </div>
 
     <div class="row">
         <div class="col">
+            <label>Instrument Type</label>
+            <select id="instrumentType">
+                <option value="EQUITY_OPTION">Equity Option</option>
+                <option value="BOND_FUTURE_OPTION">Bond Futures Option</option>
+            </select>
+
             <label>Symbol</label>
             <input id="symbol" value="AAPL">
 
@@ -93,7 +100,7 @@
                 <option value="PUT">PUT</option>
             </select>
 
-            <label>Spot Price</label>
+            <label>Underlying Price (spot or futures)</label>
             <input id="spotPrice" type="number" step="0.01" value="195">
 
             <label>Strike Price</label>
@@ -180,7 +187,8 @@
 let baseSpotForSlider = null;
 let baseTheoreticalPrice = null;
 
-function loadDemo() {
+function loadEquityDemo() {
+    document.getElementById("instrumentType").value = "EQUITY_OPTION";
     document.getElementById("symbol").value = "AAPL";
     document.getElementById("optionType").value = "CALL";
     document.getElementById("spotPrice").value = "195";
@@ -190,19 +198,38 @@ function loadDemo() {
     document.getElementById("timeToMaturity").value = "0.25";
     document.getElementById("marketPrice").value = "7.8";
     document.getElementById("spotSlider").value = 100;
-    explainOption();
+
+    //explainOption();
 }
 
+function loadBondFutureDemo() {
+    document.getElementById("instrumentType").value = "BOND_FUTURE_OPTION";
+    document.getElementById("symbol").value = "TYH5";
+    document.getElementById("optionType").value = "CALL";
+    document.getElementById("spotPrice").value = "118.25";   // futures price
+    document.getElementById("strikePrice").value = "118.00";
+    document.getElementById("riskFreeRate").value = "0.04";
+    document.getElementById("volatility").value = "0.18";
+    document.getElementById("timeToMaturity").value = "0.5";
+    document.getElementById("marketPrice").value = "1.45";
+    document.getElementById("spotSlider").value = 100;
+
+    //explainOption();
+}
+
+
 async function explainOption() {
-    const payload = {
-        symbol: document.getElementById("symbol").value,
-        optionType: document.getElementById("optionType").value,
-        spotPrice: parseFloat(document.getElementById("spotPrice").value),
-        strikePrice: parseFloat(document.getElementById("strikePrice").value),
-        riskFreeRate: parseFloat(document.getElementById("riskFreeRate").value),
-        volatility: parseFloat(document.getElementById("volatility").value),
-        timeToMaturity: parseFloat(document.getElementById("timeToMaturity").value)
+  const payload = {
+    symbol: document.getElementById("symbol").value,
+    instrumentType: document.getElementById("instrumentType").value,
+    optionType: document.getElementById("optionType").value,
+    spotPrice: parseFloat(document.getElementById("spotPrice").value),
+    strikePrice: parseFloat(document.getElementById("strikePrice").value),
+    riskFreeRate: parseFloat(document.getElementById("riskFreeRate").value),
+    volatility: parseFloat(document.getElementById("volatility").value),
+    timeToMaturity: parseFloat(document.getElementById("timeToMaturity").value)
     };
+
     const marketPrice = document.getElementById("marketPrice").value;
     if (marketPrice !== "") payload.marketPrice = parseFloat(marketPrice);
 
@@ -287,17 +314,36 @@ function updateSliderLabels(simSpot, origPrice, newPrice) {
     }
 }
 
-async function onSpotSliderChange() {
+let sliderCallTimeout = null;
+
+function onSpotSliderChange() {
     if (!baseSpotForSlider) {
+        // No baseline yet – nothing to simulate
         updateSliderLabels(null, null, null);
         return;
     }
+
     const slider = document.getElementById("spotSlider");
-    const pct = parseFloat(slider.value);
+    const pct = parseFloat(slider.value); // 50–150
     const newSpot = baseSpotForSlider * (pct / 100.0);
 
+    // Update spot label immediately, but don't hit backend yet
+    updateSliderLabels(newSpot, baseTheoreticalPrice, null);
+
+    // Debounce: wait a short time after user stops moving the slider
+    if (sliderCallTimeout) {
+        clearTimeout(sliderCallTimeout);
+    }
+
+    sliderCallTimeout = setTimeout(() => {
+        callSliderPricing(newSpot);
+    }, 300); // 300–400 ms works well
+}
+
+async function callSliderPricing(newSpot) {
     const payload = {
         symbol: document.getElementById("symbol").value,
+        instrumentType: document.getElementById("instrumentType").value,
         optionType: document.getElementById("optionType").value,
         spotPrice: newSpot,
         strikePrice: parseFloat(document.getElementById("strikePrice").value),
@@ -307,14 +353,16 @@ async function onSpotSliderChange() {
     };
 
     try {
-        const response = await fetch("http://localhost:8080/api/options/explain", {
+        const response = await fetch("/api/options/explain", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         });
         const data = await response.json();
+        // Now we have the new theoretical price for this simulated spot
         updateSliderLabels(newSpot, baseTheoreticalPrice, data.theoreticalPrice);
     } catch (err) {
+        // Backend failed – keep labels but note we don't have a new price
         updateSliderLabels(newSpot, baseTheoreticalPrice, null);
     }
 }
