@@ -65,7 +65,9 @@ Combined Response: Numbers + Narrative
 
 **Request body**
 
-```json
+``` json sample
+---
+SOFR Future Options
 
 {
   "symbol": "SOFR Mar-26",
@@ -78,6 +80,8 @@ Combined Response: Numbers + Narrative
   "volatility": 0.60,
   "numberOfContracts": 100
 }
+---
+Bond Future Options
 
 {
   "symbol": "US 10Y Treasury Jun-26",
@@ -90,6 +94,8 @@ Combined Response: Numbers + Narrative
   "volatility": 0.18,
   "numberOfContracts": 100
 }
+---
+Equity Future Options
 
 {
   "symbol": "AAPL",
