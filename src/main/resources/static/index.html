@@ -828,6 +828,13 @@
                             Designed to be read live in a client or demo meeting.
                         </div>
                     </div>
+                    <!-- Baseline vs Simulated banner -->
+                    <div id="explainBanner"
+                         style="display:none; padding:6px 10px; margin:0 0 8px 0;
+                            font-size:12px; border-radius:6px;
+                            background:#fff4d6; color:#6b4e00; border:1px solid #f0d58c;">
+                    </div>
+
                     <div id="explanation">Waiting for explanation...</div>
 
                     <details style="margin-top:6px;">
@@ -958,6 +965,36 @@
         return currencyFmt.format(value);
     }
 
+    // Option A banner support (baseline explanation vs simulated spot)
+    let baselineSpotForExplain = null;
+
+    function updateExplainBanner(simulatedSpot) {
+        const banner = document.getElementById("explainBanner");
+        if (!banner || baselineSpotForExplain == null) return;
+
+        const currentSpot = (typeof simulatedSpot === "number")
+            ? simulatedSpot
+            : parseFloat(document.getElementById("spotPrice")?.value);
+
+        if (!isFinite(currentSpot)) {
+            banner.style.display = "none";
+            return;
+        }
+
+        if (Math.abs(currentSpot - baselineSpotForExplain) < 1e-6) {
+            banner.style.display = "none";
+            return;
+        }
+
+        banner.style.display = "block";
+        banner.innerHTML =
+            `Explanation shown for baseline spot <b>${baselineSpotForExplain.toFixed(2)}</b>. ` +
+            `You are simulating spot <b>${currentSpot.toFixed(2)}</b>. ` +
+            `Click <b>Explain Option</b> to refresh explanation.`;
+    }
+
+
+
     let baseSpotForSlider = null;
     let baseTheoreticalPrice = null;
 
@@ -1066,7 +1103,13 @@
         baseSpotForSlider = null;
         baseTheoreticalPrice = null;
 
-        // Hide summary section
+
+
+        // Reset banner baseline (so banner won't show until next Explain Option)
+        baselineSpotForExplain = null;
+        const banner = document.getElementById("explainBanner");
+        if (banner) banner.style.display = "none";
+// Hide summary section
         const summary = document.getElementById("summary");
         const placeholder = document.getElementById("summaryPlaceholder");
         if (summary) {
@@ -1178,6 +1221,108 @@
         drawPayoffChart("CALL", 95.25, 0);
     }
 
+        function applyExplainResponseToUi(payload, data, options) {
+        const opts = options || {};
+        const updateExplanation = opts.updateExplanation !== false; // default true
+        const updateRawJson = opts.updateRawJson !== false; // default true
+        const updateSliderBaseline = opts.updateSliderBaseline !== false; // default true
+        const updateSpotInput = opts.updateSpotInput === true; // default false
+
+        if (updateSpotInput) {
+            const spotInput = document.getElementById("spotPrice");
+            if (spotInput && typeof payload.spotPrice === "number") {
+                spotInput.value = payload.spotPrice.toFixed(2);
+            }
+        }
+
+        // Baseline for slider
+        if (updateSliderBaseline) {
+            baseSpotForSlider = payload.spotPrice;
+            baseTheoreticalPrice = data.price;
+        }
+
+        // Show summary section
+        const summary = document.getElementById("summary");
+        const placeholder = document.getElementById("summaryPlaceholder");
+        if (summary) summary.style.display = "block";
+        if (placeholder) placeholder.style.display = "none";
+
+        // Position summary
+        const contracts = payload.numberOfContracts || 0;
+        const positionSummary = document.getElementById("positionSummary");
+        if (positionSummary) {
+            const side = payload.optionType === "CALL" ? "Call" : "Put";
+            positionSummary.textContent =
+                `${contracts} contract(s) · ${payload.instrumentType.replaceAll("_", " ")} · ${side} · Strike ${payload.strikePrice}`;
+        }
+
+        // Theoretical price
+        const priceEl = document.getElementById("price");
+        if (priceEl) {
+            priceEl.textContent = (typeof data.price === "number")
+                ? data.price.toFixed(4)
+                : "-";
+        }
+
+        // Greeks with negative in red
+        const negColor = getComputedStyle(document.documentElement).getPropertyValue("--negative") || "#b33939";
+        const posColor = getComputedStyle(document.documentElement).getPropertyValue("--accent-soft") || "#3b4b80";
+
+        const deltaEl = document.getElementById("delta");
+        const gammaEl = document.getElementById("gamma");
+        const thetaEl = document.getElementById("theta");
+        const vegaEl = document.getElementById("vega");
+        const rhoEl = document.getElementById("rho");
+
+        if (deltaEl) {
+            deltaEl.textContent = fmtCurrency(data.delta);
+            deltaEl.style.color = (typeof data.delta === "number" && data.delta < 0) ? negColor : posColor;
+        }
+        if (gammaEl) {
+            gammaEl.textContent = (data.gamma != null ? data.gamma.toFixed(6) : "-");
+            gammaEl.style.color = (typeof data.gamma === "number" && data.gamma < 0) ? negColor : posColor;
+        }
+        if (thetaEl) {
+            const thetaDay = (typeof data.theta === "number") ? (data.theta / 365) : null;
+            thetaEl.textContent = (thetaDay != null) ? fmtCurrency(thetaDay) : "-";
+            thetaEl.style.color = (thetaDay != null && thetaDay < 0) ? negColor : posColor;
+        }
+        if (vegaEl) {
+            vegaEl.textContent = fmtCurrency(data.vega);
+            vegaEl.style.color = (typeof data.vega === "number" && data.vega < 0) ? negColor : posColor;
+        }
+        if (rhoEl) {
+            rhoEl.textContent = fmtCurrency(data.rho);
+            rhoEl.style.color = (typeof data.rho === "number" && data.rho < 0) ? negColor : posColor;
+        }
+
+        // AI explanation (optional)
+        if (updateExplanation && data.explanation !== undefined) {
+            renderExplanation(data.explanation);
+        }
+
+        // Raw JSON (optional)
+        if (updateRawJson) {
+            document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+        }
+
+        // Slider + payoff labels
+        if (typeof data.price === "number") {
+            document.getElementById("origPriceLabel").textContent = baseTheoreticalPrice != null ? baseTheoreticalPrice.toFixed(4) : data.price.toFixed(4);
+        }
+
+        const slider = document.getElementById("spotSlider");
+        if (slider && updateSliderBaseline) slider.value = 100;
+
+        // When called from Explain Option, show orig/new = theoretical baseline.
+        // When called from slider pricing, caller will override updateSliderLabels separately.
+        if (updateSliderBaseline) {
+            updateSliderLabels(baseSpotForSlider, baseTheoreticalPrice, baseTheoreticalPrice);
+        }
+
+        drawPayoffChart(payload.optionType, payload.strikePrice, data.price);
+    }
+
     async function explainOption() {
         const payload = {
             symbol: document.getElementById("symbol").value,
@@ -1203,87 +1348,22 @@
 
             const data = await response.json();
 
-            // Baseline for slider
-            baseSpotForSlider = payload.spotPrice;
-            baseTheoreticalPrice = data.price;
 
-            // Show summary section
-            const summary = document.getElementById("summary");
-            const placeholder = document.getElementById("summaryPlaceholder");
-            if (summary) summary.style.display = "block";
-            if (placeholder) placeholder.style.display = "none";
 
-            // Populate concise position summary: symbol · instrument · option · strike · contracts
-            const posEl = document.getElementById("positionSummary");
-            if (posEl) {
-                const sym = data.symbol || payload.symbol || "";
-                const instr = data.instrumentType || payload.instrumentType || "";
-                const otype = data.optionType || payload.optionType || "";
-                const strike = (payload.strikePrice != null && !isNaN(payload.strikePrice))
-                    ? `Strike ${payload.strikePrice}`
-                    : "";
-                const contracts = (payload.numberOfContracts != null && !isNaN(payload.numberOfContracts))
-                    ? `${payload.numberOfContracts.toFixed(0)} contracts`
-                    : "";
-                const parts = [sym, instr, otype, strike, contracts].filter(Boolean);
-                posEl.textContent = parts.join(" · ");
-            }
+            // Apply results to UI (price, greeks, explanation, payoff) and set slider baseline
+            applyExplainResponseToUi(payload, data, {
+                updateExplanation: true,
+                updateRawJson: true,
+                updateSliderBaseline: true,
+                updateSpotInput: false
+            });
 
-            // Theoretical price
-            const priceEl = document.getElementById("price");
-            if (priceEl) {
-                priceEl.textContent = fmtCurrency(data.price);
-                const negColorCss = getComputedStyle(document.documentElement).getPropertyValue("--negative") || "#b33939";
-                const posColorCss = getComputedStyle(document.documentElement).getPropertyValue("--accent-soft") || "#3b4b80";
-                priceEl.style.color = data.price < 0 ? negColorCss : posColorCss;
-            }
+            // Banner baseline: explanation corresponds to this spot
+            baselineSpotForExplain = payload.spotPrice;
+            updateExplainBanner(baselineSpotForExplain);
 
-            // Greeks with negative in red
-            const negColor = getComputedStyle(document.documentElement).getPropertyValue("--negative") || "#b33939";
-            const posColor = getComputedStyle(document.documentElement).getPropertyValue("--accent-soft") || "#3b4b80";
 
-            const deltaEl = document.getElementById("delta");
-            const gammaEl = document.getElementById("gamma");
-            const thetaEl = document.getElementById("theta");
-            const vegaEl = document.getElementById("vega");
-            const rhoEl = document.getElementById("rho");
 
-            if (deltaEl) {
-                deltaEl.textContent = fmtCurrency(data.delta);
-                deltaEl.style.color = data.delta < 0 ? negColor : posColor;
-            }
-            if (gammaEl) {
-                gammaEl.textContent = (data.gamma != null ? data.gamma.toFixed(6) : "-");
-                gammaEl.style.color = data.gamma < 0 ? negColor : posColor;
-            }
-            if (thetaEl) {
-                const thetaDay = data.theta / 365;
-                thetaEl.textContent = fmtCurrency(thetaDay);
-                thetaEl.style.color = thetaDay < 0 ? negColor : posColor;
-            }
-            if (vegaEl) {
-                vegaEl.textContent = fmtCurrency(data.vega);
-                vegaEl.style.color = data.vega < 0 ? negColor : posColor;
-            }
-            if (rhoEl) {
-                rhoEl.textContent = fmtCurrency(data.rho);
-                rhoEl.style.color = data.rho < 0 ? negColor : posColor;
-            }
-
-            // AI explanation
-            renderExplanation(data.explanation);
-
-            // Raw JSON
-            document.getElementById("output").textContent =
-                JSON.stringify(data, null, 2);
-
-            // Slider + payoff
-            document.getElementById("origPriceLabel").textContent =
-                (typeof data.price === "number" ? data.price.toFixed(4) : "-");
-            const slider = document.getElementById("spotSlider");
-            if (slider) slider.value = 100;
-            updateSliderLabels(baseSpotForSlider, baseTheoreticalPrice, baseTheoreticalPrice);
-            drawPayoffChart(payload.optionType, payload.strikePrice, data.price);
         } catch (err) {
             document.getElementById("output").textContent =
                 "Error calling backend: " + err;
@@ -1337,6 +1417,10 @@
         const pct = parseFloat(slider.value);
         const newSpot = baseSpotForSlider * (pct / 100.0);
 
+
+        // Banner: clarify baseline vs simulated spot while sliding
+        updateExplainBanner(newSpot);
+
         // Update spot label immediately, but don't hit backend yet
         updateSliderLabels(newSpot, baseTheoreticalPrice, null);
 
@@ -1365,14 +1449,24 @@
 
         setLoading(true);
         try {
-            const response = await fetch("/api/options/explain", {
+            // IMPORTANT: slider uses /price (no LLM) to keep UI responsive and avoid repeated AI calls
+            const response = await fetch("/api/options/price", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
+
+            // Update input spot field and pricing/greeks; keep existing explanation unchanged.
+            applyExplainResponseToUi(payload, data, {
+                updateExplanation: false,
+                updateRawJson: false,
+                updateSliderBaseline: false,
+                updateSpotInput: true
+            });
+
+            // Update slider-specific labels
             updateSliderLabels(newSpot, baseTheoreticalPrice, data.price);
-            drawPayoffChart(payload.optionType, payload.strikePrice, data.price);
         } catch (err) {
             // Backend failed – keep labels but note we don't have a new price
             updateSliderLabels(newSpot, baseTheoreticalPrice, null);
@@ -1526,7 +1620,7 @@
         if (modal) modal.style.display = "flex";
     }
 
-    
+
     function openFormulaModal() {
         const modal = document.getElementById("formulaModal");
         if (modal) modal.style.display = "flex";

@@ -39,7 +39,7 @@ public class OptionController {
 
     @PostMapping("/explain")
     public OptionResponse explain(@Valid @RequestBody OptionRequest request) {
-        logCaller(httpRequest);
+        logCaller(httpRequest,"EXPLAIN");
         if(!resultCache.containsKey(request)){
             OptionResponse response = pricingService.price(request);
             String explanation = llmService.buildExplanation(request, response);
@@ -51,13 +51,20 @@ public class OptionController {
         }
         return resultCache.get(request);
     }
+    @PostMapping("/price")
+    public OptionResponse price(@Valid @RequestBody OptionRequest request) {
+        logCaller(httpRequest,"GREEKS");
+        // Pricing-only endpoint: returns theoretical price + greeks without invoking the LLM
+        return pricingService.price(request);
+    }
+
 
     @GetMapping("/batch-explain-sample")
     public List<OptionResponse> batchExplainSample() throws IOException {
         List<OptionResponse> results = new ArrayList<>();
         ClassPathResource resource = new ClassPathResource("sample-options.csv");
         try (BufferedReader reader = new BufferedReader(
-            new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
 
             String line;
             boolean first = true;
@@ -74,7 +81,7 @@ public class OptionController {
                 OptionRequest req = new OptionRequest();
                 req.setSymbol(parts[0]);
                 req.setOptionType("CALL".equalsIgnoreCase(parts[1]) ?
-                    OptionType.CALL : OptionType.PUT);
+                        OptionType.CALL : OptionType.PUT);
                 req.setSpotPrice(Double.parseDouble(parts[2]));
                 req.setStrikePrice(Double.parseDouble(parts[3]));
                 req.setRiskFreeRate(Double.parseDouble(parts[4]));
@@ -90,14 +97,14 @@ public class OptionController {
         return results;
     }
 
-    public void logCaller(HttpServletRequest req) {
+    public void logCaller(HttpServletRequest req, String target) {
         //for usage audit purpose
         String ip = req.getRemoteAddr();
         String xff = req.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {
-           ip = xff.split(",")[0].trim();
+            ip = xff.split(",")[0].trim();
         }
         String agent = httpRequest.getHeader("User-Agent");
-        log.info("Explain API called from IP={} UserAgent={}", ip, agent);
+        log.info("{} called for {} from {}", ip, target, agent);
     }
 }
