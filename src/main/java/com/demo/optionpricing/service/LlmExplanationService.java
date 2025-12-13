@@ -27,8 +27,14 @@ public class LlmExplanationService {
 
     // Single source of truth for model name – controlled via application.properties
     // e.g. openai.model=gpt-4.1
-    @Value("${openai.model}")
-    private String modelName;
+    @Value("${openai.api.model}")
+    private String gptModel;
+
+    @Value("${openai.api.key}")
+    private String gptKey;
+
+    @Value("${openai.api.url}")
+    private String gptUrl;
 
     // Optional logging toggle if you already have this property
     @Value("${openai.enable-logging}")
@@ -36,7 +42,6 @@ public class LlmExplanationService {
 
     // Fixed URL for the Chat Completions style endpoint
     // Adjust if you are using a different base URL.
-    private static final String OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
     public LlmExplanationService() {
         var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000); // 10 seconds
@@ -47,11 +52,11 @@ public class LlmExplanationService {
      * Build a human-readable explanation for the given priced option.
      */
     public String buildExplanation(OptionRequest request, OptionResponse result) {
-        String apiKey = System.getenv("OPENAI_API_KEY");
+        String apiKey = ((gptKey == null || gptKey.isEmpty()) ? System.getenv("OPENAI_API_KEY") : gptKey);
 
         if (apiKey == null || apiKey.isBlank()) {
-            log.warn("OPENAI_API_KEY not set. Returning placeholder explanation.");
-            return "LLM explanation is not available because OPENAI_API_KEY is not configured. "
+            log.warn("API_KEY is not set. Returning placeholder explanation.");
+            return "Sorry, LLM explanation is not available at this time for API config/limits. "
                     + "You can still use the numerical price and Greeks for analysis.";
         }
 
@@ -59,7 +64,7 @@ public class LlmExplanationService {
             String systemPrompt = buildSystemPrompt();
             String userPrompt = buildUserPrompt(request, result);
 
-            log.info("Sending explanation request to LLM. Model: {}, Payload: {}", modelName, userPrompt);
+            log.info("Sending explanation request to LLM. Model: {}, Payload: {}", gptModel, userPrompt);
             String explanation = callOpenAi(apiKey, systemPrompt, userPrompt);
             log.info("LLM explanation (first 200 chars): {}",
                     explanation != null && explanation.length() > 200
@@ -68,13 +73,13 @@ public class LlmExplanationService {
             return explanation;
         } catch (ResourceAccessException e) {
                 log.error("LLM call timed out or could not connect", e);
-                return "The explanation service could not be reached. "
+                return "Sorry, the explanation service could not be reached. "
                         + "This is usually caused by network, firewall, or proxy restrictions. "
                         + "Pricing results are still valid.";
 
         } catch (Exception e) {
             log.error("Error while calling LLM for explanation", e);
-            return "An error occurred while generating the explanation. "
+            return "Sorry, an error occurred while generating the explanation. "
                     + "Please review the numeric results (price and Greeks) above.";
         }
     }
@@ -136,33 +141,33 @@ public class LlmExplanationService {
         userMessage.put("role", "user");
         userMessage.put("content", userPrompt);
 
-        requestBody.put("model", modelName);
+        requestBody.put("model", gptModel);
         requestBody.put("messages", List.of(systemMessage, userMessage));
         requestBody.put("temperature", 0.2);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-        log.info("Calling OpenAI endpoint {}", OPENAI_CHAT_URL);
+        log.debug("Calling OpenAI endpoint {}", gptUrl);
         ResponseEntity<Object> responseEntity =
-                restTemplate.exchange(OPENAI_CHAT_URL, HttpMethod.POST, entity, Object.class);
-        log.info("Returned from OpenAI call");
+                restTemplate.exchange(gptUrl, HttpMethod.POST, entity, Object.class);
+        log.debug("Returned from OpenAI call");
         Object body = responseEntity.getBody();
         if (!(body instanceof Map<?, ?> map)) {
-            return "Unexpected LLM response format.";
+            return "Sorry, Unexpected LLM response format.";
         }
 
         Object choicesObj = map.get("choices");
         if (!(choicesObj instanceof List<?> choices) || choices.isEmpty()) {
-            return "LLM returned no choices in the response.";
+            return "Sorry, LLM returned no choices in the response.";
         }
 
         Object first = choices.get(0);
         if (!(first instanceof Map<?, ?> firstMap)) {
-            return "Unexpected LLM response format (choice not an object).";
+            return "Sorry, Unexpected LLM response format (choice not an object).";
         }
 
         Object messageObj = firstMap.get("message");
         if (!(messageObj instanceof Map<?, ?> msgMap)) {
-            return "Unexpected LLM response format (no message object).";
+            return "Sorry, Unexpected LLM response format (no message object).";
         }
 
         Object contentObj = msgMap.get("content");
@@ -170,7 +175,7 @@ public class LlmExplanationService {
             return contentStr;
         }
 
-        return "LLM returned a response but no textual content could be parsed.";
+        return "Sorry, LLM returned a response but no textual content could be parsed.";
     }
 
     /**

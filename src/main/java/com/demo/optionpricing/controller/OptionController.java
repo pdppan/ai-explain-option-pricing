@@ -5,7 +5,11 @@ import com.demo.optionpricing.model.OptionRequest;
 import com.demo.optionpricing.model.OptionType;
 import com.demo.optionpricing.service.LlmExplanationService;
 import com.demo.optionpricing.service.OptionPricingService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,15 +18,19 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/options")
 public class OptionController {
+    @Autowired
+    private HttpServletRequest httpRequest;
 
     private final OptionPricingService pricingService;
     private final LlmExplanationService llmService;
-
+    private HashMap<OptionRequest,OptionResponse> resultCache = new HashMap<OptionRequest,OptionResponse>();
+    private static final Logger log = LoggerFactory.getLogger(OptionController.class);
     public OptionController(OptionPricingService pricingService,
                             LlmExplanationService llmService) {
         this.pricingService = pricingService;
@@ -31,10 +39,17 @@ public class OptionController {
 
     @PostMapping("/explain")
     public OptionResponse explain(@Valid @RequestBody OptionRequest request) {
-        OptionResponse result = pricingService.price(request);
-        String explanation = llmService.buildExplanation(request, result);
-        result.setExplanation(explanation);
-        return result;
+        logCaller(httpRequest);
+        if(!resultCache.containsKey(request)){
+            OptionResponse response = pricingService.price(request);
+            String explanation = llmService.buildExplanation(request, response);
+            response.setExplanation(explanation);
+            if (explanation != null && explanation.startsWith("Sorry")) {
+                return response;
+            }
+            resultCache.put(request, response);
+        }
+        return resultCache.get(request);
     }
 
     @GetMapping("/batch-explain-sample")
@@ -73,5 +88,16 @@ public class OptionController {
             }
         }
         return results;
+    }
+
+    public void logCaller(HttpServletRequest req) {
+        //for usage audit purpose
+        String ip = req.getRemoteAddr();
+        String xff = req.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+           ip = xff.split(",")[0].trim();
+        }
+        String agent = httpRequest.getHeader("User-Agent");
+        log.info("Explain API called from IP={} UserAgent={}", ip, agent);
     }
 }
